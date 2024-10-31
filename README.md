@@ -10,7 +10,7 @@ make sure to pull in changes if your version is behind before pushing.
 * I based my vignette on the [EPA AQS API](https://aqs.epa.gov/aqsweb/documents/data_api.html)
 * I used httr2 to download the pm2.5 data from a single site located in New York County and then I plotted the data.
 * Had I not been focused on sites, I could have more easily downloaded the data.
-
+* I wonder what other APIs might have been available?
 
  
 
