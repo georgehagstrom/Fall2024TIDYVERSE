@@ -9,7 +9,8 @@ make sure to pull in changes if your version is behind before pushing.
 
 # List of Projects
 
-1. George I. Hagstrom, EPA AQS API [https://aqs.epa.gov/aqsweb/documents/data_api.html](https://aqs.epa.gov/aqsweb/documents/data_api.html)
+1. Dr. George Hagstrom, EPA AQS API [https://aqs.epa.gov/aqsweb/documents/data_api.html](https://aqs.epa.gov/aqsweb/documents/data_api.html)
+
 
 
 
