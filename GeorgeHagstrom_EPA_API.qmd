@@ -1,0 +1,207 @@
+---
+title: "EPA Code Vignette"
+author: "George Hagstrom"
+format: html
+---
+
+## Introduction
+
+I decided to use `httr2` to explore the EPA air quality services API. This
+API contains a number of difference services which let you download different types of measurements from air quality sensors located around the country. The documentation for this API is located here:
+[https://aqs.epa.gov/aqsweb/documents/data_api.html
+](https://aqs.epa.gov/aqsweb/documents/data_api.html
+). 
+
+## Accessing the API to Download PM2.5 Data from a Sensor in Manhattan
+
+The goal of this code will be to locate a sensor in Manhattan which takes PM2.5 data, download the data, and make a plot of the data.
+
+
+I begin by defining some code which I will use to build up requests
+
+```{r}
+#| echo: true
+library(httr2)
+library(tidyverse)
+library(jsonlite)
+library(tibblify)
+library(lubridate)
+
+epa_email = "georgehagstrom@gmail.com"
+
+epa_url = "https://aqs.epa.gov/data/api/"
+epa_key = read_csv("/home/georgehagstrom/work/Teaching/DATA607/website/meetups/Meetup10/epa_key.csv") |> 
+  pull(key)
+
+# This creates a blank request targetted at the epa_url
+
+epa_req = epa_url |> request() |> 
+  req_url_query(
+    email = epa_email
+  )
+
+
+
+# We are going to need to download some lists to figure out how to find things we are interested in
+
+epa_classes_url = "list/classes"
+
+epa_counties_url = "list/countiesByState"
+
+epa_states_url = "list/states"
+
+epa_pars_url = "list/parametersByClass"
+
+# Which is New York State?
+
+epa_req_states = epa_req |> 
+  req_url_path_append(epa_states_url) |> 
+  req_url_query(
+    key = epa_key
+  ) 
+
+states_list = epa_req_states |> req_perform() |> 
+  resp_body_json()
+
+
+
+states_list$Data |> tibblify() |> filter(code == "New York")
+
+```
+
+This code let us determine the numerical code by which New York is
+identified, which turnes out to be `"36"`.
+
+Next we look at the counties, with the goal of finding New York county:
+
+```{r}
+#| echo: true
+
+epa_req_counties = epa_req |> 
+  req_url_path_append(epa_counties_url) |> 
+  req_url_query(
+    key = epa_key,
+    state = "36"
+  )
+
+counties_list = epa_req_counties |> 
+  req_perform() |> 
+  resp_body_json()
+
+
+counties_list$Data |> tibblify() |> filter(code == "New York")
+
+```
+
+New York county is denoted by the code `"061"`.
+
+The next step is to identify the parameter code for some PM2.5 
+measurement. To do this, we first need to explore the list of
+parameter classes, so we will query the `list/classes` endpoint:
+
+
+```{r}
+#| echo: true
+epa_classes_list = epa_req |> 
+  req_url_path_append(epa_classes_url) |> 
+  req_url_query(
+    key = epa_key
+  ) |> 
+  req_perform() |> 
+  resp_body_json()
+
+epa_classes_list$Data |> tibblify() |> print(n=27)
+```
+
+We were able to identify `"PM2.5 CONT NONREF"`. We will use this
+to query the `list/parametersByClass` endpoint:
+
+```{r}
+#| echo: true
+pm2.5code = "PM2.5 CONT NONREF" 
+
+epa_pm2.5pars_list = epa_req |> 
+  req_url_path_append(epa_pars_url) |> 
+  req_url_query(
+    email = epa_email,
+    key = epa_key,
+    pc = pm2.5code
+  ) |> 
+  req_perform() |> 
+  resp_body_json()
+
+epa_pm2.5pars_list$Data |> tibblify()
+```
+
+We were able to identify it as `88501`.
+
+Next we will search the `monitors/byCounty` endpoint to identify monitors in New York county that measure parameter `88501`, which
+is our PM2.5 measurement.
+
+```{r}
+#| echo: true
+
+county_endpoint = "monitors/byCounty"
+
+
+epa_req_county_monitors = epa_req |> 
+  req_url_path_append(county_endpoint) |> 
+  req_url_query(
+    key = epa_key,
+    county = "061",
+    param = "88501",
+    bdate = "20150101",
+    edate = "20240930",
+    state = "36"
+  )
+
+county_monitor_list = epa_req_county_monitors |> req_perform() |> resp_body_json()
+
+county_monitor_list$Data |> tibblify() 
+```
+
+We identify `0135` as one potential sensor with such data.
+
+We are going to pull one year of data from this sensor from the
+`sampleData/bySite` endpoint:
+
+```{r}
+
+site = "0135"
+
+data_by_site_url = "sampleData/bySite"
+
+epa_req_sample = epa_req |> 
+  req_url_path_append(data_by_site_url) |> 
+  req_url_query(
+    key = epa_key,
+    site = site,
+    param = "88501",
+    state = "36",
+    county = "061",
+    bdate = "20080101",
+    edate = "20081231"
+  )
+
+
+epa_sample_data = epa_req_sample |> req_perform() |> 
+  resp_body_json()
+
+epa_sample_data$Data |> tibblify()
+```
+
+This succeeded, so let's make a plot. We are going to average the 
+measurements over each day to reduce the noise slightly:
+
+
+```{r}
+epa_sample_data$Data |> tibblify() |> select(date_gmt,sample_measurement) |> group_by(date_gmt) |> 
+  summarise(mean_pm25 = mean(sample_measurement)) |> ggplot(aes(x=as_datetime(date_gmt),y=mean_pm25)) +
+  geom_point() +
+  scale_x_datetime()
+```
+
+
+## Conclusion
+
+I'm surprised at how noisy the PM2.5 measurements are from this single site in Manhttan. Although there is substantial noise, it does seem like July is a month with much worse air quality than other months, at least in 2008. 
