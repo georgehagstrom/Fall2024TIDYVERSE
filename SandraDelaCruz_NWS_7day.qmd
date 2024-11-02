@@ -1,0 +1,127 @@
+---
+title: "NWS Code Vignette"
+author: "Sandra Dela Cruz"
+format: html
+---
+
+**Introduction**
+
+The National Weather Service (NWS) API offers the public a wide range of essential weather data nationwide. This API contains data like date, time, temperature, rain precipitation, and types of weather condition.
+
+The documentation of this API can be found here:
+
+<https://weather-gov.github.io/api/general-faqs>
+
+In this vignette we will explore the 7 day forecast of Santa Catalina Island, located in California, extract the data and make a plot out of it using the `tidyverse` and `httr2` packages.
+
+```{r}
+#Let's start by loading our package and defining some code 
+library(tidyverse)
+library(httr2)
+
+#create base url
+nws_base_url = "https://api.weather.gov"
+```
+
+We extracted our coordinates for Santa Catalina Island from the NWS as well using their search button, which can be accessed here: <https://www.weather.gov/>
+
+```{r}
+#now let's create a request
+catalina_response = request(nws_base_url) |>
+  req_url_path_append(
+    'points',
+    '33.40421,-118.41456'
+  ) |>
+  req_perform()
+```
+
+Let's now explore our lists to find out where to extract our data for our daily weather forecast. If you'll notice, we have first a list of 5 which contains `context`, `id`, `type`, `geometry`, and `properties`. But we'll focus on the `properties` list since this is where we'll find our information for our daily weather forecast.
+
+```{r}
+#a glimpse of our list
+catalina_response |>
+  resp_body_json() |> #to extract body of json
+  glimpse()
+```
+
+Now let's extract from `properties` the list of `forecast`. Perform the request and fetch the response back to the server, like we did before, and have a look at our list again. Now we have a list of 4 and notice that we have `periods` under `properties` which has a list of 14 in it.
+
+```{r}
+catalina_url = catalina_response |>
+  resp_body_json() |>
+  pluck('properties', 'forecast')
+
+catalina_forecast_response = request(catalina_url) |>
+  req_perform()
+
+catalina_forecast_response |>
+  resp_body_json() |>
+  glimpse() #to view list
+```
+
+Extract the `periods` list from `properties` and let's take a look at what are nested inside this list for us to create a table with the information we want to answer.
+
+```{r}
+catalina_7day = catalina_forecast_response |>
+  resp_body_json() |>
+  pluck('properties', 'periods') |>
+  glimpse()
+```
+
+Now that we have seen what's nested inside, let's create a data frame which will contain our 7 day forecast.
+
+```{r}
+#create data frame for 7 day forecast
+catalina_7day_night = catalina_forecast_response |>
+  resp_body_json() |>
+  pluck('properties', 'periods') |>
+  map_dfr(
+    \(x) {
+      tibble(
+        day = x |> pluck('name'),
+        start_time = x |> pluck('startTime'),
+        end_time = x |> pluck('endTime'),
+        temp_F = x |> pluck('temperature'),
+        type = x |> pluck('shortForecast')
+      )
+    }
+  )|>
+  mutate(
+    start_time = ymd_hms(start_time),
+    end_time = ymd_hms(end_time)
+  )
+```
+
+Notice that our data frame consist of weathers in both day and night. Now we'll separate them into 2 data frames, so we'll know and see the pattern of our temperature in both.
+
+```{r}
+catalina_7day = catalina_7day_night [seq(1, nrow(catalina_7day_night), by = 2), ]
+
+catalina_7night = catalina_7day_night [seq(2, nrow(catalina_7day_night), by = 2), ]
+
+#create plot for day temp
+ggplot(catalina_7day, aes(fct_inorder(day), temp_F)) +
+  geom_line(group = 1) +
+  geom_point() +
+  labs(title = "7 day Weather Forecast of Santa Catalina Island, CA",
+       subtitle = "Days Forecast",
+       x = "",
+       y = "Temperature in F") +
+  theme_minimal() + 
+  scale_y_continuous(breaks = seq(0, 100, by = 1))
+
+#create plot for night temp
+ggplot(catalina_7night, aes(fct_inorder(day), temp_F)) +
+  geom_line(group = 1) +
+  geom_point() +
+  labs(title = "7 day Weather Forecast of Santa Catalina Island, CA",
+       subtitle = "Night Forecast",
+       x = "",
+       y = "Temperature in F") +
+  theme_minimal() + 
+  scale_y_continuous(breaks = seq(0, 100, by = 1))
+```
+
+**Conclusion**
+
+We can conclude with these plots that the temperature suddenly drops down around 40 - 50's once night time sets in Santa Catalina Island. It feels like a breath of fresh air after the scorching sun rises in that island.
