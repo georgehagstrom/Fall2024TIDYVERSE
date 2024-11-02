@@ -16,7 +16,7 @@ library(lubridate)
 
 I am using the Urban Institute's Education Data Portal API. The website for the [Urban Institute's 'direct access' API documentation is available here](https://educationdata.urban.org/documentation/#direct_access). 
 
-On the above-linked overview for the Urban Institute's direct access API, I can see that the 'base' of the URL is what I will call `uri_url` below.
+On the above-linked overview for the Urban Institute's direct access API, I can see that the 'base' of the URL is what I will call `ui_url` below.
 
 First, I am going to explore their `finance` data. I explored a bit of the variables we can specify on this webpage for the Urban Institute's Education Data Portal [Data Explorer](https://educationdata.urban.org/documentation/school-districts.html#ccd_finance). 
 
