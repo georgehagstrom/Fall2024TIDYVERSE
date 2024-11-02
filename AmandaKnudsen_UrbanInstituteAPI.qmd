@@ -1,0 +1,136 @@
+---
+title: "Tidyverse Create: Urban Institute API"
+author: "Amanda Rose Knudsen"
+format: html
+editor: source
+
+---
+
+```{r}
+library(httr2)
+library(tidyverse)
+library(jsonlite)
+library(tibblify)
+library(lubridate)
+```
+
+I am using the Urban Institute's Education Data Portal API. The website for the [Urban Institute's 'direct access' API documentation is available here](https://educationdata.urban.org/documentation/#direct_access). 
+
+On the above-linked overview for the Urban Institute's direct access API, I can see that the 'base' of the URL is what I will call `uri_url` below.
+
+First, I am going to explore their `finance` data. I explored a bit of the variables we can specify on this webpage for the Urban Institute's Education Data Portal [Data Explorer](https://educationdata.urban.org/documentation/school-districts.html#ccd_finance). 
+
+In this section, I can see that one of the first variables listed is the "FIPS" (Federal Information Processing Standards state code) and I can see that New York state is the FIPS code "36".
+
+Based on the guidance in the above-linked sources, I see that the "finance" data is within the Common Core of Data (`ccd`) and I can identify the order in which these required variables, in addition to year, should be specified. I will call this url append `schooldistricts_finance_2020_ny`.
+
+
+```{r}
+ui_url <- "https://educationdata.urban.org/api/v1/"
+
+req <- ui_url |> request()
+
+schooldistricts_finance_2020_ny <- "school-districts/ccd/finance/2020/?fips=36"
+
+schooldistricts_finance_ny_2020_query <- req |>
+  req_url_path_append(schooldistricts_finance_2020_ny) |>
+  req_url_query()
+
+response_data <- schooldistricts_finance_ny_2020_query |>
+  req_perform() |>
+  resp_body_json()
+
+response_data |> tibblify() 
+
+# glimpse(response_data)
+```
+Interesting! OK, what other information can I get? Let's continue to look at the Common Core of Data (`ccd`) but instead of their `finance` data let's look at `enrollment` data for the same year and same state. 
+
+We can see that we'll need to specify the grade and that kindergarten is "grade 0" using the variables described and listed in the [Data Explorer section for CCD Enrollment](https://educationdata.urban.org/documentation/school-districts.html#ccd-enrollment-by-grade). Let's try and see enrollment numbers for school districts in 2020 for NY state kindergartens.  
+
+```{r}
+kindergarten_2020_ny <- "school-districts/ccd/enrollment/2020/grade-0/?fips=36"
+
+kindergarten_2020_ny_query <- req |>
+  req_url_path_append(kindergarten_2020_ny) |>
+  req_url_query()
+
+response_data2 <- kindergarten_2020_ny_query |>
+  req_perform() |>
+  resp_body_json()
+
+response_data2 |> tibblify() 
+```
+Based on the documentation linked above, we can see that the value of "99" for the variables `race` and `sex` means "total". 
+
+Let's look into one more query: this time for the "directory" which might have some useful longitude and latitude values. 
+
+```{r}
+directory_2020_ny <- "school-districts/ccd/directory/2020/?fips=36"
+
+directory_2020_ny_query <- req |>
+  req_url_path_append(directory_2020_ny) |>
+  req_url_query()
+
+response_data3 <- directory_2020_ny_query |>
+  req_perform() |>
+  resp_body_json()
+
+response_data3 |> tibblify() 
+```
+Let's look at some of the variable names in the directory:
+
+```{r}
+## yikes! this printed way too much but tells us about the data structure:
+# str(response_data3) 
+
+## getting an error here because this is a big list of lists:
+# response_data3_tibble <- response_data3 |> 
+  # map_dfr(as_tibble) 
+
+# str(response_data3[[4]]) # again - it's a lot. how can we handle this?
+
+# Extract the nested list (focusing on the fourth element)
+response_data3_tibble <- response_data3[[4]] |>
+  # Remove NULL lists
+  keep(~ !is.null(.x)) |> 
+  # Convert each remaining list to a tibble
+  map_dfr(~ as_tibble(.x[!sapply(.x, is.null)])) 
+
+# Check the structure of the resulting tibble
+glimpse(response_data3_tibble)
+```
+```{r}
+ggplot(response_data3_tibble, aes(x = enrollment, y = teachers_total_fte)) +
+  geom_point() +
+  labs(title = "Scatterplot of Enrollment vs Total FTE Teachers",
+       subtitle = "FTE = Full Time Equivalent",
+       x = "Enrollment",
+       y = "Total FTE Teachers")
+```
+Strangely, it looks like there are some school districts where there is near-0 enrollment yet there are nearly 500 full time equivalent teachers. There must be something off in the data - we'd want to look into this more.
+
+
+```{r}
+ggplot(response_data3_tibble, aes(x = enrollment, y = guidance_counselors_total_fte)) +
+  geom_point() +
+  labs(title = "Scatterplot of Enrollment vs Total FTE Guidance Counselors",
+       subtitle = "FTE = Full Time Equivalent",
+       x = "Enrollment",
+       y = "Total FTE Guidance Counselors")
+```
+
+Again, here, we see near-0 enrollment numbers yet over 30 full time equivalent guidance counselors. We'd definitely want to better understand how and why we're seeing this apparent error. Let's look at something else other than the 'full time equivalent' variables.
+
+```{r}
+ggplot(response_data3_tibble, aes(x = enrollment, y = english_language_learners)) +
+  geom_point() +
+  labs(title = "Scatterplot of Enrollment vs English Language Learners",
+       x = "Enrollment",
+       y = "English Language Learners")
+```
+The good news is that we don't see the similar errors of high y-axis -- with this final plot we are looking at a comparison of the number of English language learners and Enrollment numbers. This makes "sense" unlike the other two plots above, which we would want to further investigate to draw any sort of conclusions about the reason or meaning behind the data.  
+
+If we were going to go further with this, I would be interested to see these New York State school districts on in a map view. There is, after all, longitude and latitude data as well as information about the location of the school district. But for now, we'll leave it at this. Note: all the variables are described in clear terms in the hyperlinked sources above.
+
+For reference for the next part of this assignment, my github username is `amandaknudsen`.
