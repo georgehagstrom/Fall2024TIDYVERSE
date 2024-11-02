@@ -11,9 +11,8 @@ make sure to pull in changes if your version is behind before pushing.
 
 1. George I. Hagstrom, EPA AQS API [https://aqs.epa.gov/aqsweb/documents/data_api.html](https://aqs.epa.gov/aqsweb/documents/data_api.html)
 
-2. Sandra Dela Cruz, NWS 7day API [https://weather-gov.github.io/api/general-faqs](https://weather-gov.github.io/api/general-faqs)
-
-3.Andreina Abreu, Weather Alerts API [https://www.weather.gov/documentation/services-web-api#/default/alerts_query](https://www.weather.gov/documentation/services-web-api#/default/alerts_query)
+2. Sandra Dela Cruz, NWS 7day API [https://weather-gov.github.io/api/general-faqs](https://weather-gov.github.io/api/general-faqs)                 
+3. Andreina Abreu, Weather Alerts API [https://www.weather.gov/documentation/services-web-api#/default/alerts_query](https://www.weather.gov/documentation/services-web-api#/default/alerts_query)
 
 
 
