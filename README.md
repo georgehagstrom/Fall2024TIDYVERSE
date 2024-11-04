@@ -16,6 +16,7 @@ make sure to pull in changes if your version is behind before pushing.
 4. Amanda Knudsen, Urban Institute Education Data Explorer API [https://educationdata.urban.org/documentation/#direct_access](https://educationdata.urban.org/documentation/#direct_access)
 5. Curtis Elsasser, USDA API [FoodData Central API Guide](https://fdc.nal.usda.gov/api-guide.html)
 6. Marc Fridson, Star Wars API [https://swapi.dev/](https://swapi.dev/)
+7. Hugo Vega, NYT API [https://api.nytimes.com/svc/search/v2/articlesearch.json]
 
  
 
