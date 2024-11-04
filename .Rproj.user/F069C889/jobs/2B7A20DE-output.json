@@ -1,7 +1,0 @@
-[1,"Installing 'tibblify' ...\n"]
-[2,"trying URL 'https://cran.rstudio.com/bin/macosx/big-sur-arm64/contrib/4.4/tibblify_0.3.1.tgz'\n"]
-[2,"Content type 'application/x-gzip' length 595906 bytes (581 KB)\n====================="]
-[2,"=="]
-[1,"The downloaded binary packages are in\n"]
-[1,"\t/var/folders/2h/80jgg2z52ys__9l70sdjs25c0000gn/T//RtmpfQKMvT/downloaded_packages\n"]
-[2,"===========================\ndownloaded 581 KB\n\n\n\n✔ Package 'tibblify' successfully installed.\n"]
