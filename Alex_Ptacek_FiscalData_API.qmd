@@ -1,0 +1,134 @@
+---
+title: "Accessing Financial Data from the U.S. Treasury with httr2"
+author: "Alex Ptacek"
+format: pdf
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Part 1: Intro
+
+The data we will be looking at comes from the database of the U.S. Department of Treasury, which is accessible via the *FiscalData* API. This API contains a variety of financial data produced by the U.S. Treasury, such as interest and bond rates, debt, and transactional data. This data provides transparency between the U.S. Treasury and the public on their financial actions and status. In aggregate, the data may give us insight into the strategies employed by the financial department of the federal government. 
+
+In this vignette, we will examine the "Average Interest Rates on U.S. Treasury Securites" data set, which will be named `int_rates`. This dataset contains the average interest rates on a monthly basis for a variety of federal securities, such as notes and bonds, between January 2001 and September 2024. We will analyze this data to understand how the interest rates for notes and bonds have changed over time.
+
+## Part 2: Data Analysis
+
+**Step 1: Load packages**
+
+```{r load pkg, message=FALSE}
+library(tidyverse)
+library(jsonlite)
+library(httr2)
+library(tibblify)
+library(janitor)
+library(XICOR)
+```
+
+**Step 2: Obtain dataset from the FiscalData API with httr2**
+
+a. Create a httr2 request with the API's base url
+
+```{r}
+treasury_url <- "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
+treasury_req <- treasury_url |> request()
+```
+
+b. Add the endpoint for the `int_rates` to the base url and call the dataset from the API into a json format
+
+```{r}
+int_rates_url <- "/v2/accounting/od/avg_interest_rates?page[number]=1&page[size]=5000"
+
+int_rates_json <- treasury_req |> 
+  req_url_path_append(int_rates_url) |> #Addendum the `int_rates` endpoint
+  req_perform() |> #Perform the request
+  resp_body_json() #Extract the data we need from the response
+
+int_rates <- int_rates_json$data |> tibblify() #Convert json data to tibble
+```
+
+**Step 3: Exploratory Data Analysis**
+
+a. Let's start by observing our variables. We can see that the date and interest rate variables are not in correct format, so we will mutate them.
+
+```{r warning=FALSE}
+glimpse(int_rates)
+
+int_rates <- int_rates |> 
+  mutate(record_date = ymd(record_date),
+         avg_interest_rate_amt = parse_number(avg_interest_rate_amt))
+```
+
+b. We can create a new dataframe for analyzing the relationship between notes and bonds with `pivot_wider()`.
+
+```{r}
+notes_bonds_rates <- int_rates |> 
+  filter(security_desc == "Treasury Notes" |
+         security_desc == "Treasury Bonds") |>
+  pivot_wider(id_cols = record_date, names_from = security_desc, 
+              values_from = avg_interest_rate_amt) |> 
+  clean_names()
+notes_bonds_rates |> head(5)
+```
+
+c. The summary statistics give us the sense that bond rates are typically higher than notes rates and they have similar variance. 
+
+```{r}
+notes_bonds_rates$treasury_notes |> summary()
+notes_bonds_rates$treasury_notes |> sd()
+
+notes_bonds_rates$treasury_bonds |> summary()
+notes_bonds_rates$treasury_bonds |> sd()
+```
+
+d. Based on the histograms, rates are not normally distributed for both notes and bonds.
+
+```{r}
+ggplot(data = notes_bonds_rates, aes(x = treasury_notes)) +
+  geom_histogram(binwidth = .3)
+
+ggplot(data = notes_bonds_rates, aes(x = treasury_bonds)) +
+  geom_histogram(binwidth = .3)
+```
+
+**Step 4: Discovery**
+
+a. We can plot the change in interest rates over time for notes and bonds to see how they vary together. Since 2001, average rates have trended downwards for both notes and bonds. The pace of this decline seems similar between securities, meaning there may be a positive correlation.
+
+```{r message=FALSE}
+int_rates |> 
+  filter(security_desc == "Treasury Notes" |
+         security_desc == "Treasury Bonds") |> 
+  
+  ggplot(aes(x = record_date, y = avg_interest_rate_amt)) + 
+    geom_point(aes(color = security_desc)) +
+    geom_smooth(method = "lm", se = FALSE, aes(group = security_desc), color = "gray1")
+```
+
+b. The correlation coefficient gives us the implication that there is a strong linear relationship between notes rates and bonds rates. This suggests the possibility of us being able to use the rate of one security to predict the other. 
+
+```{r}
+cor(notes_bonds_rates$treasury_bonds, notes_bonds_rates$treasury_notes)
+```
+
+c. When we plot the rates against each other we see a more complex story. Not only is the relationship between notes and bonds non-linear, our regression model significantly decreases in accuracy at lower and higher average interest rates. 
+
+```{r message=FALSE}
+notes_bonds_rates |> 
+  ggplot(aes(x = treasury_bonds, y = treasury_notes)) + 
+  geom_point() +
+  geom_smooth(se = FALSE, color = "gray1")
+```
+
+d. Since the relationship is non-linear and non-monotonic, our Pearson correlation coefficient may not be as useful. Let's instead use the xicor package to calculate the ksaai coefficient which will tell us to what degree note rates are a function of bond rates. The ksaai coefficient is very high, slightly higher than our r coefficient. Therefore, bond rates are a strong predictor of note rates and we can use our model, or perhaps even a better one, as a prediction tool. However, we should note that, in practice, our model will be of little practical use when bond rates are less than 3.5 or greater than 7.5, which is significantly limiting.
+
+```{r}
+xicor(notes_bonds_rates$treasury_bonds, notes_bonds_rates$treasury_notes)
+```
+
+
+## Part 3: Conclusion
+
+Thanks to the FiscalData API we can continue to gain insight into the U.S. Treasury's financial strategies. Our analysis of the relationship between the average interest rates of notes and bonds gave us strong evidence that notes rates are dependent on bond rates. When the Treasury increases bond rates, they tend to do the same to notes rates, and vice versa. Based on this, we can also theorize that the factors that the Treasury uses to determine bond rates are similar to the those that determine notes rates. This discovery on the U.S. Treasury's notes and bonds strategy is an important insight for understanding how the department operates.
+
