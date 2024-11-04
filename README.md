@@ -15,7 +15,7 @@ make sure to pull in changes if your version is behind before pushing.
 3. Andreina Abreu, Weather Alerts API [https://www.weather.gov/documentation/services-web-api#/default/alerts_query](https://www.weather.gov/documentation/services-web-api#/default/alerts_query)
 4. Amanda Knudsen, Urban Institute Education Data Explorer API [https://educationdata.urban.org/documentation/#direct_access](https://educationdata.urban.org/documentation/#direct_access)
 5. Curtis Elsasser, USDA API [FoodData Central API Guide](https://fdc.nal.usda.gov/api-guide.html)
-
+6. Marc Fridson, Star Wars API [https://swapi.dev/](https://swapi.dev/)
 
  
 
