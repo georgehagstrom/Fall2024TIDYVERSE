@@ -1,0 +1,65 @@
+# Title: NWS Weather Alerts Analysis
+# Author: Andreina Abreu
+# Description:
+
+# API: Weather Alerts API by National Weather Service (NWS)
+# API Documentation: https://www.weather.gov/documentation/services-web-api#/default/alerts_query
+
+# Introduction:
+# The Weather Alerts API provides access to real-time weather alerts across the U.S. 
+# In this analysis, I retrieve current severe weather alerts and determine the most frequently reported event types.
+
+# Code:
+# Load necessary packages
+library(httr2)
+library(dplyr)
+library(ggplot2)
+library(purrr)  
+
+# Define API URL
+url <- "https://api.weather.gov/alerts"
+
+# Function to get weather alerts
+get_weather_alerts <- function() {
+  response <- request(url) %>%
+    req_perform()
+  
+  if (response$status_code == 200) {
+    return(resp_body_json(response)$features)  
+  } else {
+    stop("Error: ", response$status_code)
+  }
+}
+
+# Process data into tidy format
+alerts_data <- get_weather_alerts()
+
+alerts_df <- tibble(
+  event = map_chr(alerts_data, ~ .x$properties$event %||% "Unknown"),
+  severity = map_chr(alerts_data, ~ .x$properties$severity %||% "Unknown"),
+  urgency = map_chr(alerts_data, ~ .x$properties$urgency %||% "Unknown"),
+  area_desc = map_chr(alerts_data, ~ .x$properties$areaDesc %||% "Unknown"),
+  headline = map_chr(alerts_data, ~ .x$properties$headline %||% "No Headline")
+)
+
+# Count occurrences of each event type
+event_counts <- alerts_df %>%
+  group_by(event) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  arrange(desc(count))
+
+print(event_counts)
+
+# Visualization
+ggplot(event_counts, aes(x = reorder(event, count), y = count)) +
+  geom_bar(stat = "identity", fill = "pink") +
+  coord_flip() +
+  labs(title = "Frequency of Severe Weather Events",
+       x = "Event Type",
+       y = "Number of Alerts") +
+  theme_minimal()
+
+# Conclusion:
+# The analysis reveals that Severe Thunderstorm Warnings are the most frequent alerts, indicating a significant risk
+# and the need for awareness around these events. Other frequent alerts, such as Small Craft Advisories and 
+# Gale Warnings, also show notable weather risks for specific regions.
