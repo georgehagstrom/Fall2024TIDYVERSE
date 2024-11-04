@@ -22,4 +22,4 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 
 7.  Hugo Vega, NYT API [<https://api.nytimes.com/svc/search/v2/articlesearch.json>]
 
-8.  Alex Ptacek, FiscalData API [<https://fiscaldata.treasury.gov/api-documentation/>]
+8.  Alex Ptacek, FiscalData API <https://fiscaldata.treasury.gov/api-documentation/>
