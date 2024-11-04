@@ -1,0 +1,61 @@
+---
+title: "Consumer Pricing Analysis for 2024: St. Louis Fed API"
+author: "Marc Fridson"
+format: html
+editor: source
+---
+
+```{r}
+library(httr2)
+library(tidyverse)
+library(lubridate)
+```
+
+Using the St. Louis Fed API, I will collect CPI (Consumer Price Index) data for 2024.
+
+Here I define the API key and the request.
+
+```{r}
+fred_api_key <- "7af81fb6a64a50bcc9f1ffe52402d8d4"
+fred_base_url <- "https://api.stlouisfed.org/fred/series/observations"
+
+series_id <- "CPIAUCSL"  # Series ID for Consumer Price Index for All Urban Consumers
+
+fred_req <- fred_base_url |>
+  request() |>
+  req_url_query(
+    api_key = fred_api_key,
+    series_id = series_id,
+    file_type = "json",
+    observation_start = "2024-01-01",  # Starting date
+    observation_end = "2024-11-03"       # Ending date
+  )
+```
+
+Execute the defined request and structure into data frame.
+
+```{r}
+
+fred_resp <- fred_req |> req_perform() |> resp_body_json()
+
+
+cpi_data <- fred_resp$observations |> tibblify()
+
+
+cpi_data <- cpi_data |>
+  mutate(date = as_date(date),
+         value = as.numeric(value))
+
+cpi_data
+```
+
+Creating a graph of CPI values and trends from 2024 to date.
+
+```{r}
+
+cpi_data |>
+  ggplot(aes(x = date, y = value, group = 1)) +
+  geom_line()
+```
+
+**The CPI for 2024 has steadily increased, increasing the most from January through March. In April and May it was pretty flat, but has increased from June through now (11/3).**
