@@ -18,7 +18,7 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 
 5.  Curtis Elsasser, USDA API [FoodData Central API Guide](https://fdc.nal.usda.gov/api-guide.html)
 
-6.  Marc Fridson, Star Wars API <https://swapi.dev/>
+6.  Marc Fridson, FRED API [Federal Reserve Bank of St. Louis] https://fred.stlouisfed.org/docs/api/fred/
 
 7.  Hugo Vega, NYT API [<https://api.nytimes.com/svc/search/v2/articlesearch.json>]
 
