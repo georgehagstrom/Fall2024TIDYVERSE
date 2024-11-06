@@ -25,3 +25,6 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 8.  Alex Ptacek, FiscalData API <https://fiscaldata.treasury.gov/api-documentation/>
 
 9.  Yana Rabkova, The Metropolitan Museum of Art Collection API <https://collectionapi.metmuseum.org/public/collection/v1/objects>
+
+10. Rupendra Shrestha, Weather Alert API <https://www.weather.gov/documentation/services-web-api>
+
