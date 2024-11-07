@@ -1,0 +1,371 @@
+---
+title: "Economic indicators with Alpha Advantage API Lab"
+author: "Darwhin Gomez"
+date: "`r Sys.Date()`"
+format: 
+  html:
+    toc: true
+    toc-location: left
+    code-fold: true
+    warning: false
+editor: visual
+---
+
+```{r message= FALSE}
+library(tidyverse)
+library(ggplot2)
+library(httr)
+library(jsonlite)
+library(fpp3)
+library(purrr)
+library(httr2)
+library(GGally)
+set.seed(4545)
+theme_set(
+  theme_minimal()
+)
+```
+
+# Introduction
+
+In this vignette, I will access core US economic indicators by leveraging the Alpha Vantage API. The documentation for the API can be found [here](https://www.alphavantage.co/documentation/).
+
+In addition to the `httr2` and `jsonlite` packages, I will utilize the `fpp3` package to perform analyses on selected data. I will examine classic U.S. economic indicators to observe how they have changed over time. My goal is to enhance my skills in using the `httr`, `jsonlite`, and `purrr` packages while conducting some time series analysis.
+
+There is a lightweight package called `alphavantager` with built-in functions that can simplify interactions with this API. You can install it using:
+
+`install.packages("alphavantager")`
+
+However, for our purposes, we will continue interacting with the Alpha Vantage API directly.
+
+Alpha Advantage API grants free limited access to their API if you register an email. Simply replace the function below with your key("in a string")
+
+## Getting Started
+
+### Key
+
+```{r read_api_key, message = FALSE}
+#my key
+key <- read.csv("aa_api.csv") |> pull(KEY)
+
+```
+
+### API URLs
+
+```{r api_url allocation}
+
+
+unemployment_url <- paste0(
+  "https://www.alphavantage.co/query?function=UNEMPLOYMENT&apikey=", key)
+
+inflation_url <- paste0(
+  "https://www.alphavantage.co/query?function=INFLATION&interval=monthly&apikey=", key)
+
+gdp_url <- paste0("https://www.alphavantage.co/query?function=REAL_GDP&apikey=", key)
+consumer_price_index_url<-paste0("https://www.alphavantage.co/query?function=CPI&interval=monthly&apikey=", key)
+
+```
+
+### Getting the Data
+
+After reviewing the documentation and observing the demo functions, I know that the JSON data will include a column named `data`, which will contain a nested list with the time series index and corresponding values. To streamline our coding process, we can incorporate the unnesting directly into our data retrieval function.
+
+```{r define_func}
+# lets make a function that takes our url as an argument returns our data as a df
+
+
+get_data <- function(url) {
+  response <- request(url) |>
+    req_perform()
+  
+  # catch errors  and display them
+  if (response$status_code == 200) {
+    json_data <- response |> resp_body_json()
+    
+    # Convert JSON to a data frame
+    df <- as_tibble(json_data)|>
+      unnest_wider(col = data) |>  # Unnest the list columns wider
+        as_tibble()
+    return(df)
+  } else {
+    stop("Failed to retrieve data: ", response$status_code)
+  }
+}
+```
+
+```{r calling_get_data}
+# get ue data
+
+unemployment_data<- get_data(unemployment_url)
+
+# get CI data
+
+consumer_index_data<- get_data(consumer_price_index_url)
+
+# get inflation data
+
+inflation_data<- get_data(inflation_url)
+
+# get gdppc
+gdp_data <- get_data(gdp_url)
+
+```
+
+## Exploratory Data Analysis
+
+```{r ead}
+
+head(unemployment_data)
+summary(unemployment_data)
+```
+
+The unemployment tibble contains some extraneous columns that we can remove. Additionally, we will rename the `value` column to a more descriptive name, we have to convert value to a numeric type and date to a date type. After these adjustments, we can convert the tibble to a tsibble for time series analysis.
+
+```{r data_manipulation}
+ue_ts <- unemployment_data |>
+  select(date, value) |>  
+  rename(percent_unemployed = value) |>  
+  mutate(date = ymd(date),
+         percent_unemployed = as.numeric(percent_unemployed)) |>  
+  as_tsibble(index = date) 
+summary(ue_ts)
+```
+
+Our Unemployment time series:
+
+```{r ue_ts}
+print(ue_ts)
+autoplot(ue_ts)+
+  labs(
+    title = "US Unemploment percentage over time",
+    x = "Time",  
+    y = "CPI"   
+  ) 
+```
+
+The unemployment time series shows the unemployment percentage over time, with peaks highlighting tumultuous periods in U.S. history. Clear indicators of economic distress are visible during the dot-com bubble, the real estate bubble, and most recently, the COVID-19 pandemic. There also appears to be a recent increase, which might be partially attributed to recent tech layoffs, possibly contributing to the latest uptick in unemployment rates.
+
+#### Other Data
+
+#### CPI
+
+The base value for comparison is set at 100, representing the period from 1982 to 1984, according to the data sourced from the Federal Reserve Bank of St. Louis (the site from which Alpha Vantage pulls this data).
+
+To measure the Consumer Price Index (CPI), we calculate the difference between an observation and the base value of 100. This calculation yields a price index that reflects changes in the cost of goods and services relative to that point in time.
+
+CPI = (Cost of Basket in Current Year / Cost of Basket in Base Year) × 100
+
+The `value` column represents the calculated Consumer Price Index (CPI) for the observed time period compared to our base year. We will proceed by removing unnecessary columns, setting the correct data types, and converting the data into a time series format.\
+Our CPI is for all US Urban Consumers.
+
+```{r cpi}
+summary(consumer_index_data)
+head(consumer_index_data)
+```
+
+```{r cpi_wrang}
+cpi_x_82_84<- consumer_index_data|>
+  select(date, value)|>
+  mutate(date =ymd(date),
+         value = as.numeric(value))|>
+           as_tsibble(index = date)|>
+          rename(cpi=value)
+  
+head(cpi_x_82_84,)
+autoplot(cpi_x_82_84) +
+  geom_vline(xintercept = 1983, linetype = "dotted", color = "blue") +  
+  labs(
+    title = "US Consumer Price Index for All Urban Consumers\nBase Year: 1982-1984",    x = "Time",  
+    y = "CPI"   
+  ) 
+```
+
+The time series shows an increasing trend, with variance appearing to rise significantly since 2020. Did the global pandemic accelerate the Consumer Price Index (CPI)? The CPI is considered a strong indicator of economic health and a predictor of inflation. As prices rise, it reflects the changing costs of goods and services that consumers face. The fluctuations observed during the pandemic may indicate shifts in consumer behavior, supply chain disruptions, and changes in demand that collectively influence inflationary pressures.
+
+#### Inflation
+
+Inflation is the rate at which the general level of prices for goods and services rises, reducing the purchasing power of money. It is expressed as a percentage increase over a specific period, typically annually.
+
+Our data represents annual U.S. inflation rates, which are provided as percentages on the first of January of each year. Inflation can result from increased demand for goods and services or rising production costs.
+
+While moderate inflation is normal in a growing economy, high inflation can erode savings and create economic instability. Central banks monitor inflation closely and may adjust monetary policy to maintain price stability.\
+
+Our data is straightforward, and we will apply similar processing techniques as we did with our previous data frames.
+
+```{r inflation}
+summary(inflation_data)
+head(inflation_data)
+```
+
+```{r inflation_wrang}
+us_inf_ts<- inflation_data|>
+  select(date, value)|>
+  mutate(date = ymd(date),
+         value = as.numeric(value))|>
+  rename(inflation_percentage=value)|>
+  as_tsibble(index = date)
+
+head(us_inf_ts)
+
+autoplot(us_inf_ts)+
+  labs(
+    title = "US inflation as a percetage over time(years)",
+    y = "Inflation Percentage",
+    x = "Year"
+  )
+```
+
+I am interested to see how much inflation and the CPI relate to each other, In order to do this I should turn themonthlyy CPI data to yearly data. We also only have inflation data going back to 1960, so we can only compare the CPI going back to the year. Then I can join the two ts on a shared index.
+
+```{r cpi_wrang2}
+# we can pull the cpi on every january first to match our data for inflation
+yearly_cpi <- cpi_x_82_84 |>
+  filter(month(date) == 1 & day(date) == 1) |>  
+  mutate(year = year(date)) |>
+  filter(as.numeric(year) > 1959)|>
+  select(date,cpi)
+  
+    
+
+# we can use common coloumn date as  a joining col to create a new df
+head(yearly_cpi)
+head(us_inf_ts)
+
+```
+
+```{r cpi__wrang3}
+cpi_inf_1960<- us_inf_ts|>
+  full_join(yearly_cpi, join_by(date))
+head(cpi_inf_1960)
+# we dont have inflation data for 1/01/2024 so we can drop the last row
+cpi_inf_1960<- cpi_inf_1960|>
+  slice(-n())
+
+tail(cpi_inf_1960)
+head(cpi_inf_1960)
+
+
+```
+
+```{r   plot_1, }
+
+  # scaling to a hypothetical 20% max
+
+inflation_scaling_factor <- max(cpi_inf_1960$cpi, na.rm = TRUE) / 20
+ # plotting the the two together
+ggplot(cpi_inf_1960, aes(x = date)) +
+  geom_line(aes(y = cpi, color = "CPI"), size = 1) +
+  geom_line(aes(y = inflation_percentage * inflation_scaling_factor, color = "Inflation Rate"), size = 1) +
+  scale_y_continuous(
+    name = "CPI",
+    sec.axis = sec_axis(~ . / inflation_scaling_factor, name = "Inflation Rate (%)")
+  ) +
+  scale_color_manual(values = c("CPI" = "red", "Inflation Rate" = "blue")) +
+  labs(
+    title = "CPI and Inflation Rate Over Time",
+    x = "Year",
+    color = "Legend"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(color = "red"),               # Left y-axis title in red
+    axis.text.y = element_text(color = "red"),                # Left y-axis text in red
+    axis.title.y.right = element_text(color = "blue"),        # Right y-axis title in blue
+    axis.text.y.right = element_text(color = "blue")          # Right y-axis text in blue
+  )
+
+```
+
+#### GDP
+
+We will perform similar data wrangling and tidying on the Global Domestic Product time series, which is recorded on January 1st of each year. The value column is recorded in billions of dollar.
+
+```{r gdp_data}
+summary(gdp_data)
+head(gdp_data)
+```
+
+```{r gdp_data_wrangling}
+us_gdp_ts<- gdp_data |>
+  select(date, value)|>
+  mutate(date= ymd(date),
+         value = as.numeric(value))|>
+  rename(gdp_in_billions = value)|>
+  as_tsibble(index = date)
+  
+head(us_gdp_ts)
+
+autoplot(us_gdp_ts)+
+  labs(
+    title = "US GDP in Billions",
+    x= "Year",
+    y = "Billions of Dollars"
+  )+
+  theme_minimal()
+```
+
+## Bringing it together
+
+I want to add the employment numbers and GDP to the combined data we made for the inflation rate and CPI
+
+```{r combining}
+# lets tart with unemployment
+year_ue_1_1<- ue_ts|>
+  filter(month(date) == 1 & day(date) == 1) |>
+  mutate(year = year(date)) |>
+  filter(as.numeric(year) > 1959)|>
+  select(date,percent_unemployed)
+
+# same to GDP|>
+usGDP_1960 <- us_gdp_ts |>
+  filter(month(date) == 1 & day(date) == 1) |>
+  mutate(year = year(date)) |>
+  filter(as.numeric(year) > 1959)|>
+  select(date, gdp_in_billions)
+
+# join datasets
+
+us_economic_indicators<- cpi_inf_1960|>
+  full_join(usGDP_1960, join_by(date))|>
+  full_join(year_ue_1_1, join_by(date))
+head(us_economic_indicators)
+tail(us_economic_indicators)
+# get rid of 2024
+us_economic_indicators <- us_economic_indicators |> 
+  slice(-n())
+glimpse(us_economic_indicators)
+```
+
+Lets add the UE percentage to our earlier plot
+
+```{r plot2 }
+unemployment_scaling_factor <- max(us_economic_indicators$cpi, na.rm = TRUE) / 20  #  20% max for unemployment
+
+ggplot(us_economic_indicators, aes(x = date)) +
+  geom_line(aes(y = cpi, color = "CPI"), size = 1) +
+  geom_line(aes(y = inflation_percentage * inflation_scaling_factor, color = "Inflation Rate"), size = 1) +
+  geom_line(aes(y = percent_unemployed * unemployment_scaling_factor, color = "Unemployment Rate"), size = 1) +
+  scale_y_continuous(
+    name = "CPI",
+    sec.axis = sec_axis(~ . / inflation_scaling_factor, name = "Inflation/Unemployment Rate (%)")
+  ) +
+  labs(
+    title = "CPI, Inflation Rate, and Unemployment Rate Over Time",
+    x = "Year",
+    color = "Legend"
+  ) +
+  scale_color_manual(values = c("CPI" = "red", "Inflation Rate" = "blue", "Unemployment Rate" = "green")) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(color = "red"),               # Left y-axis title in red
+    axis.text.y = element_text(color = "red"),                # Left y-axis text in red
+    axis.title.y.right = element_text(color = "blue"),        # Right y-axis title for inflation rate in blue
+    axis.text.y.right = element_text(color = "blue")          # Right y-axis text for inflation rate in blue
+  )
+```
+
+The visualization reveals interesting similarities in variance among the variables, particularly between unemployment and inflation, as well as inflation and the consumer price index (CPI). Spikes in both the unemployment rate and inflation rate appear to coincide with spikes in the CPI, suggesting a correlation among these three variables.
+
+## More to come
+
+Further analysis will include time series decomposition and building a forecast for GDP.
