@@ -30,5 +30,7 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 
 11. Darwhin Gomez, Alpha Advantage API <https://www.alphavantage.co/documentation/>
 
+12. Tai Chou-Kudu, Spotify API <https://developer.spotify.com/documentation/web-api>
+
 
 

@@ -1,0 +1,140 @@
+---
+title: "Spotify Top Artist Vignette: Web API"
+author: " "
+output:
+  html_document: default
+editor: visual
+---
+
+## **Spotify Top Artist Vignette: Web API**
+
+**Spotify API Intro and Analysis Question**
+
+The Spotify API is a RESTful API that gives us access to Spotify's music library as well as user-specific data. We can find information about artists, songs, genres, etc.
+
+We'll explore the question: **Who are related artists to my top artist on Spotify?** The results will give us a list of similar artists to their most frequently listened to artist on Spotify.
+
+Install the below packages if needed.
+
+```{r, message=FALSE, warning=FALSE}
+library(httr2)
+library(tidyverse)
+library(glue)
+library(ggrepel)
+
+```
+
+**Accessing the Spotify API and Your Spotify Top Artist/Related Artists Data**
+
+Follow this [link](https://developer.spotify.com/documentation/web-api/concepts/apps) for instructions on how to get your client_id, client_secret, and redirect_uri. I suggest you set your redirect uri to <http://localhost:8888/callback> , which seems standard, according to the Spotify API reference tips.
+
+```{r set up Spotify API access and request}
+
+# Define your Spotify app credentials
+client_id <- " "
+client_secret <- " "
+redirect_uri <- "http://localhost:8888/callback"
+
+# Set scope to access the top artists
+scope <- "user-top-read"
+
+# Create a base request
+spotify_url <- "https://accounts.spotify.com"
+spotify_req <- spotify_url %>% request() %>% 
+  req_url_query(client_id = client_id, redirect_uri = redirect_uri)
+```
+
+In the next step, you may be redirected to a webpage with the text "**localhost** refused to connect." or other error text. This is actually what is supposed to happen.
+
+```{r Authorization URL}
+
+auth_url <- glue("{spotify_url}/authorize?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}")
+browseURL(auth_url)
+```
+
+The authorization code is in the error page's URL after "<http://localhost:8888/callback?code=>"
+
+This authorization code is temporary, so you may need to generate a new one if it expires. If you're having issues, make sure to try getting the authorization URL again and copying and pasting again.
+
+In the R chunk below, within token_response instructions, manually copy and paste the authorization code after "auth_code \<- ". Make sure to include quotation marks.
+
+```{r Access your user-specific Artist data from API, echo=TRUE, results="hide", message=FALSE, warning=FALSE}
+
+# Request access token with authorization code 
+
+auth_code <- " "
+
+token_url <- "https://accounts.spotify.com/api/token"
+
+token_response <- request(token_url) %>% 
+  req_auth_basic(client_id, client_secret) %>% 
+  req_body_form(
+    grant_type = "authorization_code",
+    code = auth_code, 
+    redirect_uri = redirect_uri
+  ) %>% 
+  req_perform()
+
+# Extract access token
+token <- token_response %>% 
+  resp_body_json() %>% 
+  pluck("access_token")
+
+# Request to get the top artists
+top_artists_url <- "https://api.spotify.com/v1/me/top/artists"
+
+top_artists_response <- request(top_artists_url) %>% 
+  req_auth_bearer_token(token) %>% 
+  req_perform()
+
+# Parse the top artists' data
+top_artists <- top_artists_response %>% 
+  resp_body_json() %>% 
+  pluck("items")
+
+# Extract the names of the top artists
+top_artist_names <- map_chr(top_artists, ~ .x$name)
+
+# Get the ID of the first top artist
+top_artist_id <- top_artists[[1]]$id
+
+# Request to get related artists
+related_artists_url <- glue("https://api.spotify.com/v1/artists/{top_artist_id}/related-artists")
+
+related_artists_response <- request(related_artists_url) %>% 
+  req_auth_bearer_token(token) %>% 
+  req_perform()
+
+# Parse the related artists' data
+related_artists <- related_artists_response %>% 
+  resp_body_json() %>% 
+  pluck("artists")
+
+# Extract names of related artists
+related_artist_names <- map_chr(related_artists, ~ .x$name)
+
+# Get the name of the top artist (the first in the list)
+top_artist_name <- top_artist_names[1]
+
+
+# Combine top artist and related artists into a tibble for visualization
+artist_data <- tibble(
+  artist = c(top_artist_name, related_artist_names),
+  type = c("Top Artist", rep("Related Artist", length(related_artist_names)))
+)
+
+
+ggplot(artist_data, aes(x = runif(nrow(artist_data)), y = runif(nrow(artist_data)), label = artist, color = type)) +
+  geom_text_repel(size = 5) +
+  scale_color_manual(values = c("Top Artist" = "gold", "Related Artist" = "skyblue")) +
+  labs(title = "Top Artist and Related Artists", color = "Artist Type") +
+  theme_void() +
+  theme(legend.position = "bottom",
+  plot.title = element_text(hjust = 0.5))
+```
+
+**Conclusion**
+
+I'm not surprised at all that Stevie Wonder is my top artist. In fact, I think he's one of my favorite artists of all-time, and a fun fact was that his song Isn't She Lovely was the first song I ever heard, in the delivery room. I know most of the related artists, some are also favorites: Sam Cooke, Otis Redding, Al Green, The Jackson 5, Bill Withers, Prince, Earth, Wind & Fire, The Temptations. There are only a few artists I don't know.
+
+What are the results like for you? Is the top artist who you expected? How many of the related artists have you heard before? How many of the related artists do you like?
