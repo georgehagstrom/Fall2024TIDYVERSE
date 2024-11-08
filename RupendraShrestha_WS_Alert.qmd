@@ -1,0 +1,119 @@
+---
+  title: "Accessing the National Weather Service API"
+  Author: "Rupendra Shrestha"
+  Created On: "Nov 05, 2024"
+  format: html
+---
+  
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(httr2)
+library(jsonlite)
+library(dplyr)
+library(tidyverse)
+```
+
+To access the National Weather Service (NWS) API in R, we need to send HTTP requests to the API's endpoints. Here (.qmd) template for a document that includes R code to access the NWS API, specifically for obtaining weather data such as temperature, precipitation, and weather conditions.
+
+a) API URL: https://api.weather.gov.
+b) User-Agent Requirement: The national weather service API requires a User-Agent header in the request. Include email or another identifier.
+
+# Accessing the NWS API
+
+In this vignette, we will display the weather forecast of New York City and extract the data and make ggplot using tidyverse and httr package.
+
+I have retrieve and visualizes weather alerts for New York City from the National Weather Service (NWS) API. The purpose is to monitor latest alerts, such as warnings or servere weather notifications. 
+This API provides real-time weather alerts for NYC.
+
+I have used the httr2 package to access NWS alerts for New York City. 
+
+```{r}
+# Define the API endpoint for NYC alerts
+nws_request <- request("https://api.weather.gov/alerts/active") %>%
+  req_url_query(area = "NY") # `area` is set to "NY" to filter for New York alerts
+
+# Perform the request and parse JSON response
+nws_alerts <- nws_request %>%
+  req_perform() %>%
+  resp_body_json()
+
+# Extract alerts as a tibble
+alerts_df <- tibble(
+  event = map_chr(nws_alerts$features, list("properties", "event")),
+  headline = map_chr(nws_alerts$features, list("properties", "headline")),
+  description = map_chr(nws_alerts$features, list("properties", "description")),
+  severity = map_chr(nws_alerts$features, list("properties", "severity")),
+  effective = map_chr(nws_alerts$features, list("properties", "effective")),
+  expires = map_chr(nws_alerts$features, list("properties", "expires"))
+)
+
+# Display the first few alerts
+head(alerts_df)
+
+
+```
+
+# Visualizing Alert Weather Data
+
+# Timeline of Alerts by Severity
+
+To visualize when each alert is active, we can create a timeline plot where each alert is represented as a point, colored by its severity.
+
+```{r}
+# Convert `effective` and `expires` columns to POSIXct for proper time handling
+alerts_df <- alerts_df %>%
+  mutate(
+    effective = as.POSIXct(effective),
+    expires = as.POSIXct(expires)
+  )
+
+# Plot timeline of alerts
+ggplot(alerts_df, aes(x = effective, y = severity, color = severity)) +
+  geom_point(size = 3) +
+  labs(title = "Timeline of Weather Alerts in NYC by Severity",
+       x = "Effective Time",
+       y = "Severity") +
+  scale_color_manual(values = c("Minor" = "green", "Moderate" = "yellow", "Severe" = "red", "Extreme" = "darkred")) +
+  theme_minimal()
+
+```
+
+# Horizontal Bar Plot for Alerts by Type
+
+We can also display ggplot bar char of alerts like Flood Warning and High Wind Warning.
+
+```{r}
+# Count and plot the types of alerts
+alerts_df %>%
+  count(event) %>%
+  ggplot(aes(x = n, y = reorder(event, n), fill = event)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Current Weather Alert Types in NYC",
+       x = "Number of Alerts",
+       y = "Alert Type") +
+  scale_fill_viridis_d() +  # Optional: color palette for clarity
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+```
+
+# Timeline plot with Start and End times for alert
+
+```{r}
+
+# Timeline plot with start and end times
+ggplot(alerts_df, aes(x = effective, xend = expires, y = event, color = severity)) +
+  geom_segment(size = 2) +
+  labs(title = "Active Periods of Weather Alerts in NYC",
+       x = "Time",
+       y = "Alert Type") +
+  scale_color_manual(values = c("Minor" = "green", "Moderate" = "yellow", "Severe" = "red", "Extreme" = "darkred")) +
+  theme_minimal()
+
+
+```
+
+# Conclusion
+
+This analysis provides an overview of current weather alerts for New York City. Severe weather alerts can be critical for residents and local authorities to take preventive measures. This method can be automated to regularly check for new alerts, making it a valuable tool for real-time weather monitoring.
