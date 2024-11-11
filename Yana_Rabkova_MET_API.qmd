@@ -1,0 +1,133 @@
+
+---
+title: "Tidyverse Create"
+format: 
+  pdf: 
+    keep-tex: true
+editor: source
+author: "Yana Rabkova"
+---
+
+
+```{r, global_options, include=FALSE}
+#| column: margin 
+```
+
+```{r}
+library(httr2)
+library(tidyverse)
+library(jsonlite)
+library(tibblify)
+library(lubridate)
+```
+
+The API I’m using is from the Metropolitan Museum of Art’s Public Collection. It gives you access to a ton of information about their art collection, like:
+  Object ID: A unique ID for each piece of artwork.
+  Artist Info: Details about the artist, such as their name, nationality, and bio.
+  Object Details: Information about the artwork itself, like materials, size, and when it was created.
+  Cultural and Geographic Data: The culture and region tied to the artwork.
+  Images: Links to images of the art.
+  Classification and Period: Types of art and when it was made.
+
+I want to explore the gender and nationality of the artists in the museum’s collection. My goal is to find out which nationalities are most common and whether there are any noticeable trends in the gender representation of artists across the collection.
+
+```{r}
+
+#testing to get info just for one object 
+
+object_id <- 12
+met_url <- paste0("https://collectionapi.metmuseum.org/public/collection/v1/objects/", object_id)
+
+met_req_one <- request(met_url)
+
+met_req_one |> req_dry_run()
+
+met_data_one <- met_req_one |>  
+  req_perform() |> 
+  resp_body_json()
+
+met_data_one <- compact(met_data_one) 
+met_data_tibble_one <- as_tibble(met_data_one)
+
+print(met_data_tibble_one)
+
+```
+
+```{r}
+
+#how many objects in total are there?
+objects_url <- "https://collectionapi.metmuseum.org/public/collection/v1/objects"
+
+objects_req <- request(objects_url)
+objects_data <- objects_req |> 
+  req_perform() |> 
+  resp_body_json()
+total_objects <- objects_data$objectIDs
+
+#there are 491122 objects, I will extract data for the first 1000 objects 
+
+#function
+process_met_object <- function(object_id) {
+  met_url <- paste0("https://collectionapi.metmuseum.org/public/collection/v1/objects/", object_id)
+
+  met_req <- request(met_url)
+  met_data <- met_req |>  
+    req_perform() |> 
+    resp_body_json()
+
+  if (is.list(met_data)) {
+
+    met_data <- met_data[!sapply(met_data, function(x) all(is.null(x) | length(x) == 0))]
+    
+    met_data$additionalImages <- list(NULL) 
+    met_data$tags <- list(NULL) 
+  }
+
+
+  as_tibble(met_data)
+}
+
+object_ids <- 1:1000 
+
+met_data_list <- map(object_ids, ~tryCatch(process_met_object(.), error = function(e) NULL))
+
+
+met_data_list <- met_data_list[!sapply(met_data_list, is.null)]
+
+met_data_all <- bind_rows(met_data_list)
+
+
+print(met_data_all)
+
+
+```
+
+
+```{r}
+#visualizations
+
+ggplot(met_data_all, aes(x = culture)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title = "Distribution of Artworks by Culture", x = "Culture", y = "Count") + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(met_data_all, aes(x = artistNationality)) +
+  geom_bar() +
+  theme_minimal() +
+  labs(title = "Distribution of Artworks by Artist Nationality", x = "Artist Nationality", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(met_data_all, aes(x = artistGender)) +
+  geom_bar(fill = "darkgreen") +
+  theme_minimal() +
+  labs(title = "Artist Gender Distribution", x = "Gender", y = "Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+met_data_all %>%
+  count(artistGender)
+
+#If I am requesting just the first 1000 objects, why do we have 1100 observations? is it possible that we have duplicate entries for the same objectIDs? this probably needs further investigation
+```
+The gender data from the Metropolitan Museum of Art's collection API shows a significant gap in information. Out of the total 1,100 objects, only 5 have gender information recorded as female, while the rest (1,095 objects) either have no gender data or are assumed to be male? According to the API instructions, only female gender designations are included, which suggests that the data is incomplete. The absence of gender information does not necessarily mean the artists are male.
+
+Based on the other two visualizations regarding culture and artists' nationalities, we can conclude that the dataset predominantly features American artists, at least within the first 1,000 objects.
