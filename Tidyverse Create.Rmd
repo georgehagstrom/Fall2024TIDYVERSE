@@ -1,0 +1,55 @@
+---
+title: "Tidyverse Create"
+author: "Ngawang Dakpa"
+date: "2024-11-03"
+output: pdf_document
+---
+```{r}
+library(httr2)
+library(jsonlite)
+library(tidyverse)
+library(tibblify)
+library(lubridate)
+```
+1. ebird API is used to get the list of recent observations (up to 30 days) of birds seen in a country , state , county or location. Results include only the most recent observation for each species in the region specified. It contains detailed information for each birds species such as species name, coordinates, locations, number of birds etc. With the use of this API , I wanted to find out the top 5 most common birds in Queens , New York.
+
+2. First we define the variables such as base url, parameters and the end points. 
+Then we read the key from csv for authorization purpose.
+And we build a common request which can be use every time when we make any API call which contains base url and key query.
+
+After that, call to the sub-region end point is sent to find the sub region code of Queens.
+Once we have that code , we can call the specific sub-region end point with Queens code to get the list of birds there.
+Since we are only interested in the top 5 most common birds in Queens, sorting is performed on the resulted tibble in decreasing order.
+
+```{r}
+birds_URL="https://api.ebird.org/"
+birds_recent_ep="v2/data/obs/US-NY-081/recent"
+birds_NY_sub_ep="v2/ref/region/list/subnational2/US-NY"
+api_key=read.csv("C:/Users/NGAWANG DAKPA/OneDrive/Documents/CUNY/DATA 607/Assignments/Tidyverse Create/birds_key.csv") |> 
+  pull(key)
+birds_req = birds_URL |> request() |> 
+  req_url_query(
+    key=api_key
+    )
+birds_NY_subRegions =birds_req |> 
+  req_url_path_append(birds_NY_sub_ep) |> 
+  req_perform() |> 
+  resp_body_json()
+
+birds_NY_subRegions |> tibblify()
+
+birds_list =birds_req |> 
+  req_url_path_append(birds_recent_ep) |> 
+  req_perform() |> 
+  resp_body_json()
+recent_Queends_birds<-birds_list |> tibblify()
+recent_Queends_birds<- recent_Queends_birds[order(recent_Queends_birds$howMany,decreasing = TRUE),]
+recent_Queends_birds
+
+recent_Queends_birds |> head(5) |> 
+  ggplot( aes(x=speciesCode,y=howMany, na.rm = TRUE))+
+  geom_point()+
+  ggtitle("Five most common birds in Queens, New York")
+```
+3. After the data analysis and visualization performed, we came to conclude that 5 top most birds in Queens are brant, amhgul1, fiscro, ribgul and ambduc.
+
