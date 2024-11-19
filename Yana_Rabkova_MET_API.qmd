@@ -131,3 +131,27 @@ met_data_all %>%
 The gender data from the Metropolitan Museum of Art's collection API shows a significant gap in information. Out of the total 1,100 objects, only 5 have gender information recorded as female, while the rest (1,095 objects) either have no gender data or are assumed to be male? According to the API instructions, only female gender designations are included, which suggests that the data is incomplete. The absence of gender information does not necessarily mean the artists are male.
 
 Based on the other two visualizations regarding culture and artists' nationalities, we can conclude that the dataset predominantly features American artists, at least within the first 1,000 objects.
+
+---------------------
+Andreina Abreu - Annotated Extention 
+
+To explore time-based trends and distributions, I'll introduce an extension that examines when the artworks were created. This will provide an additional dimension to the analysis, helping to uncover any patterns in historical or cultural representation over time.
+
+
+```{r}
+# Extracting date-created information for further analysis
+met_data_all <- met_data_all %>% 
+  mutate(objectBeginDate = as.numeric(objectBeginDate), 
+         objectEndDate = as.numeric(objectEndDate)) %>% 
+  filter(!is.na(objectBeginDate))
+
+# Histogram of object creation years (distribution over time)
+ggplot(met_data_all, aes(x = objectBeginDate)) +
+  geom_histogram(binwidth = 50, fill = "pink", color = "black") +
+  theme_minimal() +
+  labs(title = "Distribution of Artworks by Creation Year",
+       x = "Beginning Year of Creation",
+       y = "Count of Artworks") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
