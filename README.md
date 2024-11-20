@@ -36,5 +36,5 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 14. Andreina Abreu, The Metropolitan Museum of Art Collection API <https://collectionapi.metmuseum.org/public/collection/v1/objects>
 Extended **Yana Rabkova**'s example by adding an analysis of the temporal distribution of artworks, focusing on creation years, and visualized trends using histograms to explore historical and cultural representations.
 
-
+15. Amanda Knudsen, NWS 7day API <https://weather-gov.github.io/api/general-faqs> Extended **Sandra Dela Cruz**'s code example.
 
