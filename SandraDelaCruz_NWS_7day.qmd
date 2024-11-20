@@ -125,3 +125,113 @@ ggplot(catalina_7night, aes(fct_inorder(day), temp_F)) +
 **Conclusion**
 
 We can conclude with these plots that the temperature suddenly drops down around 40 - 50's once night time sets in Santa Catalina Island. It feels like a breath of fresh air after the scorching sun rises in that island.
+
+-------------------
+
+**Amanda Knudsen - Tidyverse Extension**
+
+I will extend this by looking at weather data in a place I've never been to: Seattle, Washington. I decided to select this location by looking at the main page map visualization from National Weather Service -- it looks like there's some storms brewing in that area of the country. 
+
+I'll start off in a similar way to the above, except using the coordinates for Seattle, which I've found [on this webpage](https://forecast.weather.gov/MapClick.php?lat=47.603229&lon=-122.33028) are Latitude 47.54548°N, Longitude 122.3147°W. Since the `nws_base_url` is already created above, I need to specify Seattle's coordinates. 
+
+```{r}
+# I needed to add the negative value before the longitude to make this work.
+seattle_response = request(nws_base_url) |>
+  req_url_path_append(
+    'points',
+    '47.54548,-122.3147'
+  ) |>
+  req_perform()
+```
+
+Similar to the above, we'll focus on the `properties` list since this is where we'll find our information for our daily weather forecast data.
+
+```{r}
+#a glimpse of our list
+seattle_response |>
+  resp_body_json() |> #to extract body of json
+  glimpse()
+```
+
+Now we extract from `properties` the list of `forecast`. 
+
+```{r}
+seattle_url = seattle_response |>
+  resp_body_json() |>
+  pluck('properties', 'forecast')
+
+seattle_forecast_response = request(seattle_url) |>
+  req_perform()
+
+seattle_forecast_response |>
+  resp_body_json() |>
+  glimpse() #to view list
+```
+
+We'll now extract the `periods` list from `properties` and take a look at what's inside.
+
+```{r}
+seattle_7day = seattle_forecast_response |>
+  resp_body_json() |>
+  pluck('properties', 'periods') |>
+  glimpse()
+```
+
+Now that we have seen what's nested inside, let's create a data frame which will contain our 7 day forecast.
+
+```{r}
+#create data frame for 7 day forecast
+seattle_7day_night = seattle_forecast_response |>
+  resp_body_json() |>
+  pluck('properties', 'periods') |>
+  map_dfr(
+    \(x) {
+      tibble(
+        day = x |> pluck('name'),
+        start_time = x |> pluck('startTime'),
+        end_time = x |> pluck('endTime'),
+        temp_F = x |> pluck('temperature'),
+        type = x |> pluck('shortForecast')
+      )
+    }
+  )|>
+  mutate(
+    start_time = ymd_hms(start_time),
+    end_time = ymd_hms(end_time)
+  )
+```
+
+As before, our data frame consists of weather in daytime and nighttime. We'll separate them into 2 data frames, so we'll know and see the pattern of our temperature in both.
+
+This time, I will add the short weather description to the 'color' so we can see what type of predicted weather the temperature corresponds to.
+
+```{r}
+seattle_7day = seattle_7day_night [seq(1, nrow(seattle_7day_night), by = 2), ]
+
+seattle_7night = seattle_7day_night [seq(2, nrow(seattle_7day_night), by = 2), ]
+
+#create plot for day temp
+ggplot(seattle_7day, aes(fct_inorder(day), temp_F, color = type)) +
+  geom_line(group = 1) +
+  geom_point() +
+  labs(title = "7 day Weather Forecast of Seattle, WA",
+       subtitle = "Days Forecast",
+       x = "",
+       y = "Temperature in F") +
+  theme_minimal() + 
+  scale_y_continuous(breaks = seq(0, 100, by = 1))
+
+#create plot for night temp
+ggplot(seattle_7night, aes(fct_inorder(day), temp_F, color = type)) +
+  geom_line(group = 1) +
+  geom_point() +
+  labs(title = "7 day Weather Forecast of Seattle, WA",
+       subtitle = "Night Forecast",
+       x = "",
+       y = "Temperature in F") +
+  theme_minimal() + 
+  scale_y_continuous(breaks = seq(0, 100, by = 1))
+```
+Stormy weather ahead! Not much like we've had in NYC lately, where there's been very little rain and lots of clear skies... In Seattle, it looks like Friday is the warmest day in the 7-day forecast ahead, corresponding with rain showers. The coldest day and night ahead is Tuesday, when the weather forecast is for chance rain and *snow* showers. Brr!  
+
+
