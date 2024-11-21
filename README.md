@@ -38,3 +38,4 @@ Extended **Yana Rabkova**'s example by adding an analysis of the temporal distri
 
 15. Amanda Knudsen, NWS 7day API <https://weather-gov.github.io/api/general-faqs> Extended **Sandra Dela Cruz**'s code example.
 
+16. Sandra Dela Cruz, Urban Institute Education Data Explorer API <https://educationdata.urban.org/documentation/#direct_access> Extended **Amanda Knudsen**'s code example.
