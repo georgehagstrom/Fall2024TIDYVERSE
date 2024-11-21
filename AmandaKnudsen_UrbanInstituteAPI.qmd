@@ -3,7 +3,6 @@ title: "Tidyverse Create: Urban Institute API"
 author: "Amanda Rose Knudsen"
 format: html
 editor: source
-
 ---
 
 ```{r}
@@ -14,16 +13,15 @@ library(tibblify)
 library(lubridate)
 ```
 
-I am using the Urban Institute's Education Data Portal API. The website for the [Urban Institute's 'direct access' API documentation is available here](https://educationdata.urban.org/documentation/#direct_access). 
+I am using the Urban Institute's Education Data Portal API. The website for the [Urban Institute's 'direct access' API documentation is available here](https://educationdata.urban.org/documentation/#direct_access).
 
 On the above-linked overview for the Urban Institute's direct access API, I can see that the 'base' of the URL is what I will call `ui_url` below.
 
-First, I am going to explore their `finance` data. I explored a bit of the variables we can specify on this webpage for the Urban Institute's Education Data Portal [Data Explorer](https://educationdata.urban.org/documentation/school-districts.html#ccd_finance). 
+First, I am going to explore their `finance` data. I explored a bit of the variables we can specify on this webpage for the Urban Institute's Education Data Portal [Data Explorer](https://educationdata.urban.org/documentation/school-districts.html#ccd_finance).
 
 In this section, I can see that one of the first variables listed is the "FIPS" (Federal Information Processing Standards state code) and I can see that New York state is the FIPS code "36".
 
 Based on the guidance in the above-linked sources, I see that the "finance" data is within the Common Core of Data (`ccd`) and I can identify the order in which these required variables, in addition to year, should be specified. I will call this url append `schooldistricts_finance_2020_ny`.
-
 
 ```{r}
 ui_url <- "https://educationdata.urban.org/api/v1/"
@@ -44,9 +42,10 @@ response_data |> tibblify()
 
 # glimpse(response_data)
 ```
-Interesting! OK, what other information can I get? Let's continue to look at the Common Core of Data (`ccd`) but instead of their `finance` data let's look at `enrollment` data for the same year and same state. 
 
-We can see that we'll need to specify the grade and that kindergarten is "grade 0" using the variables described and listed in the [Data Explorer section for CCD Enrollment](https://educationdata.urban.org/documentation/school-districts.html#ccd-enrollment-by-grade). Let's try and see enrollment numbers for school districts in 2020 for NY state kindergartens.  
+Interesting! OK, what other information can I get? Let's continue to look at the Common Core of Data (`ccd`) but instead of their `finance` data let's look at `enrollment` data for the same year and same state.
+
+We can see that we'll need to specify the grade and that kindergarten is "grade 0" using the variables described and listed in the [Data Explorer section for CCD Enrollment](https://educationdata.urban.org/documentation/school-districts.html#ccd-enrollment-by-grade). Let's try and see enrollment numbers for school districts in 2020 for NY state kindergartens.
 
 ```{r}
 kindergarten_2020_ny <- "school-districts/ccd/enrollment/2020/grade-0/?fips=36"
@@ -61,9 +60,10 @@ response_data2 <- kindergarten_2020_ny_query |>
 
 response_data2 |> tibblify() 
 ```
-Based on the documentation linked above, we can see that the value of "99" for the variables `race` and `sex` means "total". 
 
-Let's look into one more query: this time for the "directory" which might have some useful longitude and latitude values. 
+Based on the documentation linked above, we can see that the value of "99" for the variables `race` and `sex` means "total".
+
+Let's look into one more query: this time for the "directory" which might have some useful longitude and latitude values.
 
 ```{r}
 directory_2020_ny <- "school-districts/ccd/directory/2020/?fips=36"
@@ -78,6 +78,7 @@ response_data3 <- directory_2020_ny_query |>
 
 response_data3 |> tibblify() 
 ```
+
 Let's look at some of the variable names in the directory:
 
 ```{r}
@@ -100,6 +101,7 @@ response_data3_tibble <- response_data3[[4]] |>
 # Check the structure of the resulting tibble
 glimpse(response_data3_tibble)
 ```
+
 ```{r}
 ggplot(response_data3_tibble, aes(x = enrollment, y = teachers_total_fte)) +
   geom_point() +
@@ -108,8 +110,8 @@ ggplot(response_data3_tibble, aes(x = enrollment, y = teachers_total_fte)) +
        x = "Enrollment",
        y = "Total FTE Teachers")
 ```
-Strangely, it looks like there are some school districts where there is near-0 enrollment yet there are nearly 500 full time equivalent teachers. There must be something off in the data - we'd want to look into this more.
 
+Strangely, it looks like there are some school districts where there is near-0 enrollment yet there are nearly 500 full time equivalent teachers. There must be something off in the data - we'd want to look into this more.
 
 ```{r}
 ggplot(response_data3_tibble, aes(x = enrollment, y = guidance_counselors_total_fte)) +
@@ -129,8 +131,48 @@ ggplot(response_data3_tibble, aes(x = enrollment, y = english_language_learners)
        x = "Enrollment",
        y = "English Language Learners")
 ```
-The good news is that we don't see the similar errors of high y-axis -- with this final plot we are looking at a comparison of the number of English language learners and Enrollment numbers. This makes "sense" unlike the other two plots above, which we would want to further investigate to draw any sort of conclusions about the reason or meaning behind the data.  
+
+The good news is that we don't see the similar errors of high y-axis -- with this final plot we are looking at a comparison of the number of English language learners and Enrollment numbers. This makes "sense" unlike the other two plots above, which we would want to further investigate to draw any sort of conclusions about the reason or meaning behind the data.
 
 If we were going to go further with this, I would be interested to see these New York State school districts on in a map view. There is, after all, longitude and latitude data as well as information about the location of the school district. But for now, we'll leave it at this. Note: all the variables are described in clear terms in the hyperlinked sources above.
 
-For reference for the next part of this assignment, my github username is `amandaknudsen`.
+## For reference for the next part of this assignment, my github username is `amandaknudsen`.
+
+#### **Sandra Dela Cruz - Tidyverse Extension**
+
+Now, let's add a geographical map of the enrollment vs English Language Learners (ELLs) throughout New York State...
+
+```{r}
+library(sf) #download for spatial data 
+library(tigris) # download to access geographic data 
+
+#Load data for NY counties using tigris 
+ny_counties <- counties(state = "NY", cb = TRUE)  # cb = TRUE gives cartographic boundaries
+
+#create plot
+ggplot() +
+  geom_sf(data = ny_counties) + #plot NY counties
+  #plot data using long and lat
+  geom_point(data = response_data3_tibble, aes(x = longitude, y = latitude, 
+                                               size = english_language_learners, 
+                                               colour = enrollment),
+             alpha = 0.7) +
+  scale_color_gradient(low = "blue", high = "red") +
+  scale_size_continuous(range = c(1, 15)) + #use to show variations in a variable, in this case                                             #the English Language Learners
+  theme_minimal(base_size = 10) + #base_size specifies base font size for elements
+  labs(
+    title = "Enrollment vs English Language Learners in NY State",
+    subtitle = "Size: ELLs, Color: Enrollment",
+    x = "Longitude",
+    y = "Latitude",
+    color = "Enrollment", #label for color legend
+    size = "English Language Learners" #label for size legend
+  ) +
+  theme (
+    legend.position = "bottom", #position legend at the bottom of the plot
+    plot.title = element_text(hjust = 0.5), #centers the title of the plot horizontally
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+Now, we have a clear visualization of English Language Learners (ELLs) and enrollment that vary across New York State counties.
