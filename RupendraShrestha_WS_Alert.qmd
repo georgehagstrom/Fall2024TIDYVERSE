@@ -2,7 +2,9 @@
   title: "Accessing the National Weather Service API"
   Author: "Rupendra Shrestha"
   Created On: "Nov 05, 2024"
-  format: html
+  format: 
+    html:
+      embed-resources: true
 ---
   
 ```{r setup, include=FALSE}
@@ -11,6 +13,7 @@ library(httr2)
 library(jsonlite)
 library(dplyr)
 library(tidyverse)
+library(stringr)
 ```
 
 To access the National Weather Service (NWS) API in R, we need to send HTTP requests to the API's endpoints. Here (.qmd) template for a document that includes R code to access the NWS API, specifically for obtaining weather data such as temperature, precipitation, and weather conditions.
@@ -117,3 +120,117 @@ ggplot(alerts_df, aes(x = effective, xend = expires, y = event, color = severity
 # Conclusion
 
 This analysis provides an overview of current weather alerts for New York City. Severe weather alerts can be critical for residents and local authorities to take preventive measures. This method can be automated to regularly check for new alerts, making it a valuable tool for real-time weather monitoring.
+
+
+# Extension: Curtis Elsasser, 11/22/2024
+
+I would like to extend Rupendra's excellent work with a forecast. They pair nicely with alerts. A peek around the corner to see what is coming. Reassurance that the earth will still be spinning tomorrow and that we will be on its surface. I was going to add a forecast for the next 7 days, but the data is not very nice so I'm pivoting to an hourly forecast. Which, just so happens to also be 7 days of data. I think this is going to be interesting, especially since I am writing this in the midst of a storm for which the NWS has posted a "Winter Storm Warning" alert. It will be interesting to see how closely the forecast parallels the actual weather, hour by hour.
+
+## Support
+```{r}
+# The heart of Sheep Meadow
+latitude <- 40.7718
+longitude <- -73.9796
+nws_points_url <- str_c("https://api.weather.gov/points/", latitude, ",", longitude)
+```
+
+
+## Get the Forecast
+First step is to translate our coordinates into a blocked request URL. The weather service makes forecasts based on a grid. We need to let NWS figure out which grid or block our coordinates are in. In that response will be a URL with which we may request the forecast from the NWS API.
+
+```{r}
+points_json <- request(nws_points_url) |>
+  req_perform() |>
+  resp_body_json()
+
+nws_forecast_url <- points_json$properties$forecast
+nws_hourly_url <- points_json$properties$forecastHourly
+forecast_json <- request(nws_hourly_url) |>
+  req_perform() |>
+  resp_body_json()
+```
+
+## Parse the Forecast
+```{r}
+forecast_tbl <- tibble(json = forecast_json$properties$periods) |>
+  unnest_wider(json) |>
+  unnest_wider(probabilityOfPrecipitation, names_sep = "_") |>
+  unnest_wider(dewpoint, names_sep = "_") |>
+  unnest_wider(relativeHumidity, names_sep = "_") |>
+  mutate(
+    startTime = as_datetime(startTime),
+    endTime = as_datetime(endTime)
+  )
+forecast_tbl
+```
+## Visualize the Forecast
+### Temperature
+
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+forecast_tbl |>
+  ggplot(mapping = aes(
+    x = startTime, 
+    y = temperature, 
+    color = temperature
+  )) +
+  geom_line() +
+  # Mr. Freeze Meiser color scheme. It is 11/22 after all.
+  scale_color_gradient(low = "#0000ff", high = "#80ffff", name = "Temperature") +
+  labs(
+    title = "Hourly Temperature Forecast",
+    x = "Time",
+    y = "Temperature (F)"
+  )
+```
+
+### Precipitation
+```{r}
+#| fig-width: 8
+#| fig-height: 6
+forecast_tbl |>
+  ggplot(mapping = aes(
+    x = startTime, 
+    y = probabilityOfPrecipitation_value, 
+    color = probabilityOfPrecipitation_value
+  )) +
+  geom_line() +
+  scale_color_gradient(low = "red", high = "blue", name = "Probability") +
+  labs(
+    title = "Hourly Precipitation Forecast",
+    x = "Time",
+    y = "Probability of Precipitation (%)"
+  )
+```
+
+### Just for Fun
+Let's see how they are distributed. This may be a nonsense task, but I am curious.
+
+```{r}
+forecast_tbl |>
+  ggplot(mapping = aes(x = temperature)) +
+  geom_histogram(binwidth = 1) +
+  labs(
+    title = "Temperature Histogram",
+    x = "Temperature (F)",
+    y = "Count"
+  )
+```
+Oh, that's not so silly afterall. It's very clear that right now there are two prominent temperatures in the 7 day forecast: 41 and 46 F. 
+
+```{r}
+forecast_tbl |>
+  ggplot(mapping = aes(x = probabilityOfPrecipitation_value)) +
+  geom_histogram(binwidth = 10) +
+  labs(
+    title = "Probability of Precipitation Histogram",
+    x = "Probability of Precipitation (%)",
+    y = "Count"
+  )
+
+```
+This is also interesting for the same reason, at a glance it very easy to see the dominant probabilities of precipitation in the forecast. At the moment, it's looking very dry, as it rains outside. Is this thing working!?! :)
+
+## Conclusion
+It was fun extending Rupendra's work and I think it was a fruitful collaboration. We now have alerts and the ability to look around the corner and see what the NWS thinks is coming. 
