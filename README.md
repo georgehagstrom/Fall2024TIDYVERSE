@@ -39,3 +39,7 @@ Extended **Yana Rabkova**'s example by adding an analysis of the temporal distri
 15. Amanda Knudsen, NWS 7day API <https://weather-gov.github.io/api/general-faqs> Extended **Sandra Dela Cruz**'s code example.
 
 16. Sandra Dela Cruz, Urban Institute Education Data Explorer API <https://educationdata.urban.org/documentation/#direct_access> Extended **Amanda Knudsen**'s code example.
+
+17. Curtis Elsasser, NWS API <https://www.weather.gov/documentation/services-web-api>
+Extended Rupendra's excellent Weather Alert System API example by adding a 7 day hourly forecast. 
+It allows one to look around the corner (of an alert) and find the calm after the storm. There are a few visualizations to help break it down.
