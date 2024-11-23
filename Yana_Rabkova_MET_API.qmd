@@ -155,3 +155,95 @@ ggplot(met_data_all, aes(x = objectBeginDate)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+--------------------
+
+Hugo Vega - addition 
+**Missing Data Analysis**
+Dive deeper into which fields (like gender, nationality, or culture) tend to have missing data. Understanding the gaps can help interpret the results more accurately.
+```{r}
+# Analyzing missing data for key fields
+missing_data_summary <- met_data_all %>% 
+  summarize(across(c(artistNationality, artistGender, culture), ~ sum(is.na(.))/n())) %>% 
+  pivot_longer(everything(), names_to = "Field", values_to = "MissingProportion")
+
+# Visualizing missing data
+ggplot(missing_data_summary, aes(x = Field, y = MissingProportion)) +
+  geom_bar(stat = "identity", fill = "red") +
+  theme_minimal() +
+  labs(title = "Proportion of Missing Data by Field",
+       x = "Field",
+       y = "Proportion Missing")
+```
+**Cultural Representation Over Time**
+Investigate how cultural representation (e.g., specific "cultures") changes over time. Are certain cultures more represented in certain historical periods?
+```{r}
+# Artist nationality trends over time
+ggplot(met_data_all, aes(x = objectBeginDate, fill = artistNationality)) +
+  geom_histogram(binwidth = 50, position = "fill") +
+  theme_minimal() +
+  labs(title = "Artist Nationality Trends Over Time",
+       x = "Creation Year",
+       y = "Proportion of Artworks",
+       fill = "Artist Nationality") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+**Artist Nationality Trends Over Time**
+Examine how the distribution of artist nationalities shifts across centuries or decades.
+```{r}
+# Artist nationality trends over time
+ggplot(met_data_all, aes(x = objectBeginDate, fill = artistNationality)) +
+  geom_histogram(binwidth = 50, position = "fill") +
+  theme_minimal() +
+  labs(title = "Artist Nationality Trends Over Time",
+       x = "Creation Year",
+       y = "Proportion of Artworks",
+       fill = "Artist Nationality") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+**Material Usage Over Time**
+Explore trends in materials used in artwork creation over time to analyze artistic evolution.
+```{r}
+# Material trends over time
+met_data_all %>%
+  count(medium, objectBeginDate) %>%
+  filter(!is.na(objectBeginDate), medium != "") %>%
+  ggplot(aes(x = objectBeginDate, y = n, color = medium)) +
+  geom_line() +
+  theme_minimal() +
+  labs(title = "Material Usage Over Time",
+       x = "Creation Year",
+       y = "Count of Artworks",
+       color = "Material") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+**Cluster Analysis**
+If enough attributes are available (e.g., materials, cultures, time periods), clustering the objects might reveal interesting patterns or groupings in the collection.
+``{r}
+# Example of clustering using selected features
+library(cluster)
+# Selecting numeric features for clustering
+cluster_data <- met_data_all %>% 
+  select(objectBeginDate, objectEndDate) %>%
+  drop_na()
+
+# Scaling the data
+cluster_data_scaled <- scale(cluster_data)
+
+# Performing k-means clustering
+set.seed(42)
+kmeans_result <- kmeans(cluster_data_scaled, centers = 3)
+
+# Adding cluster results to the data
+met_data_all <- met_data_all %>%
+  filter(!is.na(objectBeginDate)) %>%
+  mutate(Cluster = factor(kmeans_result$cluster))
+
+# Visualizing clusters
+ggplot(met_data_all, aes(x = objectBeginDate, y = objectEndDate, color = Cluster)) +
+  geom_point(alpha = 0.6) +
+  theme_minimal() +
+  labs(title = "Cluster Analysis of Artworks",
+       x = "Beginning Year",
+       y = "Ending Year",
+       color = "Cluster")
+```
