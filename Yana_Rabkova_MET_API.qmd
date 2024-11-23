@@ -218,7 +218,7 @@ met_data_all %>%
 ```
 **Cluster Analysis**
 If enough attributes are available (e.g., materials, cultures, time periods), clustering the objects might reveal interesting patterns or groupings in the collection.
-``{r}
+```{r}
 # Example of clustering using selected features
 library(cluster)
 # Selecting numeric features for clustering
