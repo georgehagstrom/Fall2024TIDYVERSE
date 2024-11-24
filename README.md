@@ -43,3 +43,5 @@ Extended **Yana Rabkova**'s example by adding an analysis of the temporal distri
 17. Curtis Elsasser, NWS API <https://www.weather.gov/documentation/services-web-api>
 Extended Rupendra's excellent Weather Alert System API example by adding a 7 day hourly forecast. 
 It allows one to look around the corner (of an alert) and find the calm after the storm. There are a few visualizations to help break it down.
+
+18. Taha Malik, NASA Patent API <https://api.nasa.gov/techtransfer/patent/> Extended **Alex Patcek**'a code example 
