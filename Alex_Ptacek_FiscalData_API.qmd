@@ -126,6 +126,68 @@ d. Since the relationship is non-linear and non-monotonic, our Pearson correlati
 ```{r}
 xicor(notes_bonds_rates$treasury_bonds, notes_bonds_rates$treasury_notes)
 ```
+### Extended Portion 11/24/2024 by Taha Malik
+
+### Step 5: Adding Seasonal Decomposition and Annotations
+
+To better understand the temporal patterns in the interest rates for notes and bonds, we will perform a seasonal decomposition using the `stats` package. This method separates the data into seasonal, trend, and residual components.
+
+```{r}
+# Load necessary package
+library(stats)
+
+# Decompose Treasury Notes rates
+notes_ts <- ts(notes_bonds_rates$treasury_notes, start = c(2001, 1), frequency = 12)
+notes_decomp <- decompose(notes_ts)
+
+# Decompose Treasury Bonds rates
+bonds_ts <- ts(notes_bonds_rates$treasury_bonds, start = c(2001, 1), frequency = 12)
+bonds_decomp <- decompose(bonds_ts)
+
+# Plot the decomposition for Notes
+par(mfrow = c(2, 1)) # Arrange plots vertically
+plot(notes_decomp)
+title(main = "Seasonal Decomposition of Treasury Notes Rates")
+
+# Plot the decomposition for Bonds
+plot(bonds_decomp)
+title(main = "Seasonal Decomposition of Treasury Bonds Rates")
+
+# Reset plotting layout
+par(mfrow = c(1, 1))
+
+```
+
+The seasonal decomposition plots for Treasury Bonds rates display four components: observed, trend, seasonal, and random (residual). The trend shows a steady decline in interest rates from 2001 to around 2020, followed by a slight uptick closer to 2024, reflecting long-term economic shifts. The seasonal component indicates recurring periodic fluctuations, suggesting consistent patterns influenced by cyclical factors, such as market demand or fiscal policies. Lastly, the random component captures irregular variations that may stem from unpredictable events like financial crises or policy changes, as seen with noticeable volatility during certain years. Together, these elements offer insights into both stable and unpredictable drivers of bond rates.
+
+### Step 6: Annotated Trend Visualization with Annotations
+
+Next, we visualize the monthly average rates for both securities with important events annotated.
+
+```{r}
+library(ggrepel)
+
+# Annotated timeline plot
+economic_events <- tibble(
+  event = c("2008 Financial Crisis", "COVID-19 Pandemic", "2022 Inflation Surge"),
+  date = as.Date(c("2008-09-15", "2020-03-11", "2022-01-01")),
+  y_pos = c(4, 0.5, 3) # Approximate y-axis positions for annotations
+)
+
+ggplot(notes_bonds_rates, aes(x = record_date)) +
+  geom_line(aes(y = treasury_notes, color = "Notes"), size = 1) +
+  geom_line(aes(y = treasury_bonds, color = "Bonds"), size = 1) +
+  geom_point(data = economic_events, aes(x = date, y = y_pos), size = 3, color = "red") +
+  geom_text_repel(data = economic_events, aes(x = date, y = y_pos, label = event), 
+                  nudge_y = 0.5, box.padding = 0.3) +
+  scale_color_manual(values = c("Notes" = "blue", "Bonds" = "green")) +
+  labs(title = "Monthly Treasury Notes and Bonds Rates with Key Events",
+       x = "Date", y = "Average Interest Rate (%)", color = "Security Type") +
+  theme_minimal()
+
+```
+
+The graph shows how average interest rates for U.S. Treasury Notes and Bonds have changed from 2001 to 2024, along with key economic events. Both rates followed a downward trend until the COVID-19 pandemic, where they hit record lows. After that, they started rising again, particularly during the 2022 inflation surge. Major events like the 2008 Financial Crisis, COVID-19, and the inflationary spike are highlighted, showing how these moments impacted rates. Throughout, bonds consistently have higher rates than notes, reflecting their longer maturity.
 
 
 ## Part 3: Conclusion

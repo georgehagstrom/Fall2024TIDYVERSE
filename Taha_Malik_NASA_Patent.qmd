@@ -1,0 +1,87 @@
+---
+title: "Tidyverse Create"
+author: "Taha Malik"
+format: html
+editor: visual
+---
+
+## Introduction
+
+For this project, I used the `httr2` package to explore NASA's Technology Transfer API. This API offers access to NASA's patents, software, and technology spinoff descriptions, supporting the broader public in accessing these innovations. I was interested in analyzing patents related to "engine" technology to explore how many patents NASA has registered in propulsion and other engineering fields. The documentation for this API is available [here](https://technology.nasa.gov).
+
+## Accessing the API to Retrieve NASA Patents Related to Engine Technology
+
+The goal of this code is to retrieve patents associated with engines, then create a simple visualization showing the distribution of patent types by category.
+
+### Setting up the Request
+
+We start by loading the required packages and setting up a base request to the NASA API endpoint.
+
+```{r}
+#| echo: true
+library(httr2)
+library(tidyverse)
+library(jsonlite)
+
+nasa_api_url <- "https://api.nasa.gov/techtransfer/patent/"
+nasa_api_key <- "DEMO_KEY"  # Replace "DEMO_KEY" with your actual API key
+
+# Create a base request with the `nasa_api_url`
+nasa_req <- nasa_api_url |> 
+  request() |> 
+  req_url_query(api_key = nasa_api_key)
+```
+
+### Searching for Engine Patents
+
+We can now query for patents containing the word "engine." The req_url_query function is used to include our search term in the request.
+
+```{r}
+#| echo: true
+nasa_engine_req <- nasa_req |> 
+  req_url_query(patent = "engine")
+
+# Perform the request and retrieve the response
+nasa_engine_response <- nasa_engine_req |> 
+  req_perform() |> 
+  resp_body_json()
+
+# Convert results to a tidy data frame
+engine_patents <- tibble::tibble(
+  id = map_chr(nasa_engine_response$results, 1),
+  title = map_chr(nasa_engine_response$results, 3),
+  description = map_chr(nasa_engine_response$results, 4),
+  category = map_chr(nasa_engine_response$results, 6)
+)
+
+# View the data
+print(engine_patents)
+```
+
+## Visualization
+
+Now, let’s visualize the distribution of patents by category for patents related to engines.
+
+```{r}
+#| echo: true
+# Group by category and count
+engine_patent_counts <- engine_patents |> 
+  group_by(category) |> 
+  summarise(count = n())
+
+# Plot
+engine_patent_counts |> 
+  ggplot(aes(x = reorder(category, -count), y = count)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Distribution of NASA Patents Related to Engine Technology by Category",
+    x = "Category",
+    y = "Number of Patents"
+  ) +
+  theme_minimal()
+```
+
+## Conclusion
+
+The plot above shows the distribution of NASA patents related to engine technology across different categories. It highlights NASA’s focus on propulsion, power generation, and other fields critical for space exploration and innovation. This analysis underscores NASA’s diverse patent portfolio, with applications in both space and terrestrial technologies.
