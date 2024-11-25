@@ -1,0 +1,161 @@
+---
+title: "NYT API exploratory analysis"
+author: "Hugo Veg, EXTENSION: Marc Fridson"
+format: pdf
+editor: visual
+---
+
+## API Description and Research Question
+
+For the New York Times API:
+
+**API Description**: The NYT API provides access to a variety of endpoints, such as the Article Search API, which allows users to search for NYT articles based on keywords, dates, and other filters. \*\*Data Content\*: This API returns metadata about articles, including titles, abstracts, URLs, and publication dates. **Research Question**: For example, "How has the New York Times covered advancements in AI over the past year?" This question will guide the query, filtering articles related to "artificial intelligence" or "AI."
+
+```{r}
+#| echo: true
+#| warning: false
+library(tidyverse)
+library(DBI)
+library(duckdb)
+library(nycflights13)
+library(dplyr)
+library(ggplot2)
+library(maps)
+library(tidyr)
+library(rvest)
+library(robotstxt)
+library(scales)
+library(stringr)
+library(purrr)
+library(httr)
+library(httr2)
+library(jsonlite)
+library(lubridate)
+```
+
+# Using the NY Times API
+
+**Problem 6:** The New York Times web site provides a rich set of APIs, as described [here](https://developer.nytimes.com/apis) . You’ll need to start by signing up for an API key. Your task is to choose one of the New York Times APIs, construct an interface in R to read in the JSON data, and transform it into an R DataFrame.
+
+Set Up my API Key and Base URL
+
+```{r}
+#| echo: false
+
+# Your API key
+api_key <- read_file('key.txt')
+```
+
+**Query the Article Search API** Let’s make a simple request to the Article Search API for articles related to "technology".
+
+```{r}
+
+base_url <- "https://api.nytimes.com/svc/search/v2/articlesearch.json"
+
+# Parameters for the API request
+params <- list(
+  q = "election",          # Query term
+  "api-key" = api_key      # API Key
+)
+
+# Make the API request
+response <- GET(url = base_url, query = params)
+
+# Check the status of the response
+if (status_code(response) == 200) {
+  # Parse the JSON response
+  result <- content(response, "text")
+  data <- fromJSON(result)
+  
+  # Print the data
+  print(data$response$docs)  # Articles are in the "docs" field
+} else {
+  # Print an error message
+  print(paste("Error:", status_code(response)))
+}
+
+```
+
+```{r}
+
+# Set the query for articles related to "artificial intelligence"
+query <- "artificial intelligence"
+
+# Build and perform the request using httr2
+request <- request(base_url) %>%
+  req_url_query("q" = query, "api-key" = api_key) %>%
+  req_perform()
+
+# Check if the request was successful
+if (resp_status(request) == 200) {
+  
+  # Parse JSON response
+  json_data <- resp_body_json(request, simplifyVector = TRUE)
+  
+  # Extract articles data
+  articles <- json_data$response$docs
+  
+  # Convert articles to a data frame and handle fields
+  articles_df <- as_tibble(articles) %>%
+    mutate(
+      # Use `abstract` as `headline` since `headline` doesn't exist
+      headline = if ("abstract" %in% names(.)) abstract else NA_character_,
+      # Check if `pub_date` exists and parse it
+      pub_date = if ("pub_date" %in% names(.)) as.Date(pub_date) else NA_Date_
+    ) %>%
+    select(pub_date, headline, web_url, snippet,keywords)  # Select relevant fields
+  
+  # Check the resulting data frame
+  print(head(articles_df))
+  
+  # Visualization: Monthly article counts on 'Artificial Intelligence'
+  articles_df %>%
+    filter(!is.na(pub_date)) %>%  # Filter out rows with missing dates
+    mutate(month = floor_date(pub_date, "month")) %>%
+    count(month) %>%
+    ggplot(aes(x = month, y = n)) +
+    geom_line(color = "blue") +
+    labs(title = "Monthly Article Counts on 'Artificial Intelligence'",
+         x = "Month", y = "Number of Articles") +
+    theme_minimal()
+  
+} else {
+  print("Failed to retrieve data.")
+}
+
+
+```
+
+# **Marc Fridson Tidyverse Extended**
+
+I am interested in diving deeper into artificial intelligence to better understand the most common topics/keywords that commonly occur.
+
+```{r}
+#Flatten the keyword column
+
+flattened_keywords <- articles_df %>%
+  unnest(keywords) %>%
+  select(value)
+
+flattened_df <- as.data.frame(flattened_keywords)
+
+print(flattened_df)
+```
+
+```{r}
+
+library(wordcloud)
+library(RColorBrewer)
+
+# Counts of each keyword occurence
+word_freq <- table(flattened_df$value)
+
+# Create a word cloud
+wordcloud(
+  words = names(word_freq),            # Words to display
+  freq = as.numeric(word_freq),        # Their frequencies
+  min.freq = 1,                        # Minimum frequency
+  random.order = FALSE,                # Arrange in decreasing frequency
+  colors = brewer.pal(8, "Dark2")      # Color palette
+)
+```
