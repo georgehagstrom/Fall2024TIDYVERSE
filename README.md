@@ -47,3 +47,5 @@ It allows one to look around the corner (of an alert) and find the calm after th
 18. Taha Malik, NASA Patent API <https://api.nasa.gov/techtransfer/patent/> Extended **Alex Patcek**'a code example
 
 19. Marc Fridson, NYT API [<https://api.nytimes.com/svc/search/v2/articlesearch.json>] Extended **Hugo Vega's** code example
+
+20. Darwhin Gomez, Alpha Advantage API <https://www.alphavantage.co/documentation/> Extended **Alex Patcek**'s and ** Taha Malik's** code example and 

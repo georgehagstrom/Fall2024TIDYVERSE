@@ -4,12 +4,12 @@ author: "Alex Ptacek"
 format: pdf
 editor: visual
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ## Part 1: Intro
 
-The data we will be looking at comes from the database of the U.S. Department of Treasury, which is accessible via the *FiscalData* API. This API contains a variety of financial data produced by the U.S. Treasury, such as interest and bond rates, debt, and transactional data. This data provides transparency between the U.S. Treasury and the public on their financial actions and status. In aggregate, the data may give us insight into the strategies employed by the financial department of the federal government. 
+The data we will be looking at comes from the database of the U.S. Department of Treasury, which is accessible via the *FiscalData* API. This API contains a variety of financial data produced by the U.S. Treasury, such as interest and bond rates, debt, and transactional data. This data provides transparency between the U.S. Treasury and the public on their financial actions and status. In aggregate, the data may give us insight into the strategies employed by the financial department of the federal government.
 
 In this vignette, we will examine the "Average Interest Rates on U.S. Treasury Securites" data set, which will be named `int_rates`. This dataset contains the average interest rates on a monthly basis for a variety of federal securities, such as notes and bonds, between January 2001 and September 2024. We will analyze this data to understand how the interest rates for notes and bonds have changed over time.
 
@@ -28,14 +28,14 @@ library(XICOR)
 
 **Step 2: Obtain dataset from the FiscalData API with httr2**
 
-a. Create a httr2 request with the API's base url
+a.  Create a httr2 request with the API's base url
 
 ```{r}
 treasury_url <- "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
 treasury_req <- treasury_url |> request()
 ```
 
-b. Add the endpoint for the `int_rates` to the base url and call the dataset from the API into a json format
+b.  Add the endpoint for the `int_rates` to the base url and call the dataset from the API into a json format
 
 ```{r}
 int_rates_url <- "/v2/accounting/od/avg_interest_rates?page[number]=1&page[size]=5000"
@@ -50,7 +50,7 @@ int_rates <- int_rates_json$data |> tibblify() #Convert json data to tibble
 
 **Step 3: Exploratory Data Analysis**
 
-a. Let's start by observing our variables. We can see that the date and interest rate variables are not in correct format, so we will mutate them.
+a.  Let's start by observing our variables. We can see that the date and interest rate variables are not in correct format, so we will mutate them.
 
 ```{r warning=FALSE}
 glimpse(int_rates)
@@ -60,7 +60,7 @@ int_rates <- int_rates |>
          avg_interest_rate_amt = parse_number(avg_interest_rate_amt))
 ```
 
-b. We can create a new dataframe for analyzing the relationship between notes and bonds with `pivot_wider()`.
+b.  We can create a new dataframe for analyzing the relationship between notes and bonds with `pivot_wider()`.
 
 ```{r}
 notes_bonds_rates <- int_rates |> 
@@ -72,7 +72,7 @@ notes_bonds_rates <- int_rates |>
 notes_bonds_rates |> head(5)
 ```
 
-c. The summary statistics give us the sense that bond rates are typically higher than notes rates and they have similar variance. 
+c.  The summary statistics give us the sense that bond rates are typically higher than notes rates and they have similar variance.
 
 ```{r}
 notes_bonds_rates$treasury_notes |> summary()
@@ -82,7 +82,7 @@ notes_bonds_rates$treasury_bonds |> summary()
 notes_bonds_rates$treasury_bonds |> sd()
 ```
 
-d. Based on the histograms, rates are not normally distributed for both notes and bonds.
+d.  Based on the histograms, rates are not normally distributed for both notes and bonds.
 
 ```{r}
 ggplot(data = notes_bonds_rates, aes(x = treasury_notes)) +
@@ -94,7 +94,7 @@ ggplot(data = notes_bonds_rates, aes(x = treasury_bonds)) +
 
 **Step 4: Discovery**
 
-a. We can plot the change in interest rates over time for notes and bonds to see how they vary together. Since 2001, average rates have trended downwards for both notes and bonds. The pace of this decline seems similar between securities, meaning there may be a positive correlation.
+a.  We can plot the change in interest rates over time for notes and bonds to see how they vary together. Since 2001, average rates have trended downwards for both notes and bonds. The pace of this decline seems similar between securities, meaning there may be a positive correlation.
 
 ```{r message=FALSE}
 int_rates |> 
@@ -106,13 +106,13 @@ int_rates |>
     geom_smooth(method = "lm", se = FALSE, aes(group = security_desc), color = "gray1")
 ```
 
-b. The correlation coefficient gives us the implication that there is a strong linear relationship between notes rates and bonds rates. This suggests the possibility of us being able to use the rate of one security to predict the other. 
+b.  The correlation coefficient gives us the implication that there is a strong linear relationship between notes rates and bonds rates. This suggests the possibility of us being able to use the rate of one security to predict the other.
 
 ```{r}
 cor(notes_bonds_rates$treasury_bonds, notes_bonds_rates$treasury_notes)
 ```
 
-c. When we plot the rates against each other we see a more complex story. Not only is the relationship between notes and bonds non-linear, our regression model significantly decreases in accuracy at lower and higher average interest rates. 
+c.  When we plot the rates against each other we see a more complex story. Not only is the relationship between notes and bonds non-linear, our regression model significantly decreases in accuracy at lower and higher average interest rates.
 
 ```{r message=FALSE}
 notes_bonds_rates |> 
@@ -121,11 +121,12 @@ notes_bonds_rates |>
   geom_smooth(se = FALSE, color = "gray1")
 ```
 
-d. Since the relationship is non-linear and non-monotonic, our Pearson correlation coefficient may not be as useful. Let's instead use the xicor package to calculate the ksaai coefficient which will tell us to what degree note rates are a function of bond rates. The ksaai coefficient is very high, slightly higher than our r coefficient. Therefore, bond rates are a strong predictor of note rates and we can use our model, or perhaps even a better one, as a prediction tool. However, we should note that, in practice, our model will be of little practical use when bond rates are less than 3.5 or greater than 7.5, which is significantly limiting.
+d.  Since the relationship is non-linear and non-monotonic, our Pearson correlation coefficient may not be as useful. Let's instead use the xicor package to calculate the ksaai coefficient which will tell us to what degree note rates are a function of bond rates. The ksaai coefficient is very high, slightly higher than our r coefficient. Therefore, bond rates are a strong predictor of note rates and we can use our model, or perhaps even a better one, as a prediction tool. However, we should note that, in practice, our model will be of little practical use when bond rates are less than 3.5 or greater than 7.5, which is significantly limiting.
 
 ```{r}
 xicor(notes_bonds_rates$treasury_bonds, notes_bonds_rates$treasury_notes)
 ```
+
 ### Extended Portion 11/24/2024 by Taha Malik
 
 ### Step 5: Adding Seasonal Decomposition and Annotations
@@ -187,10 +188,52 @@ ggplot(notes_bonds_rates, aes(x = record_date)) +
 
 ```
 
-The graph shows how average interest rates for U.S. Treasury Notes and Bonds have changed from 2001 to 2024, along with key economic events. Both rates followed a downward trend until the COVID-19 pandemic, where they hit record lows. After that, they started rising again, particularly during the 2022 inflation surge. Major events like the 2008 Financial Crisis, COVID-19, and the inflationary spike are highlighted, showing how these moments impacted rates. Throughout, bonds consistently have higher rates than notes, reflecting their longer maturity.
+The graph shows how average interest rates for U.S. Treasury Notes and Bonds have changed from 2001 to 2024, along with key economic events. Both rates followed a downward trend until the COVID-19 pandemic, where they hit record lows. After that, they started rising again, particularly during the 2022 inflation surge. Major events like the 2008 Financial Crisis, COVID-19, and the inflationary spike are highlighted, showing how these moments impacted rates. Throughout, bonds consistently have higher rates than notes, reflecting their longer maturity.\
 
+### Extension Darwhin Gomez 11/25/2024 
+
+#### Calculating the spread between bonds and notes
+
+I was curious to explore the difference in interest rates between Treasury Bonds and Treasury Notes from the previous analysis. Using the formula treasury_bonds - treasury_notes, I created the following plot to visualize the spread between these Treasury securities over time.
+
+```{r darwhin_plot}
+# Calculate the spread between Bonds and Notes
+notes_bonds_rates <- notes_bonds_rates |> 
+  mutate(spread = treasury_bonds - treasury_notes)
+
+# Plot the spread over time
+ggplot(notes_bonds_rates, aes(x = record_date, y = spread)) +
+  geom_line(color = "purple", size = 1) +
+  geom_smooth(method = "lm",se = FALSE)+
+  labs(
+    title = "Spread Between Treasury Bonds and Notes Over Time",
+    x = "Date",
+    y = "Spread (Bonds - Notes, %)"
+  ) +
+  theme_minimal()
+
+
+
+```
+
+I fitted a linear regression (LM) line to observe how the interest rate spread between Treasury Bonds and Treasury Notes has changed over time. \
+\
+As we can see without looking at the statistics of the linear regression line, we can observe a negetive moderate slope indicating that since 2000 the spread has decreased.
+
+Finally, the above plot aligns with the visualization provided by Taha Malik, illustrating how the trends between Treasury Bonds and Notes converge over time, with the spread narrowing as time progresses.
+
+We can print out the model statistics here:\
+
+```{r darwhin_model}
+interest_spread <- lm(spread ~ record_date, data = notes_bonds_rates)
+summary(interest_spread)
+```
+
+The model reveals a negative slope, indicating that the spread between Treasury Bonds and Notes has decreased over time. The interpretation of the Yintercept is less straightforward since it represents the predicted spread at the earliest date in the dataset, but time itself is not a meaningful variable in isolation.
+
+An R-squared value of 0.666 suggests that approximately 66% of the variability in the spread is explained by time in this model. This raises an interesting question: could this trend reflect federal strategies aimed at narrowing the spread between bond and note rates? Such a move might strengthen the Treasury’s position by offering more comparable securities to the public, promoting stability and predictability in financial markets.\
+\
 
 ## Part 3: Conclusion
 
 Thanks to the FiscalData API we can continue to gain insight into the U.S. Treasury's financial strategies. Our analysis of the relationship between the average interest rates of notes and bonds gave us strong evidence that notes rates are dependent on bond rates. When the Treasury increases bond rates, they tend to do the same to notes rates, and vice versa. Based on this, we can also theorize that the factors that the Treasury uses to determine bond rates are similar to the those that determine notes rates. This discovery on the U.S. Treasury's notes and bonds strategy is an important insight for understanding how the department operates.
-
