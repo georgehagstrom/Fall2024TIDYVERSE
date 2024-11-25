@@ -47,3 +47,4 @@ It allows one to look around the corner (of an alert) and find the calm after th
 18. Taha Malik, NASA Patent API <https://api.nasa.gov/techtransfer/patent/> Extended **Alex Patcek**'a code example
 
 19. Marc Fridson, NYT API [<https://api.nytimes.com/svc/search/v2/articlesearch.json>] Extended **Hugo Vega's** code example
+20. Tanvir Raju: Extended Andreina Abreu's<https://api.weather.gov/alerts/active> NWS Alerts vignette with additional analysis.
