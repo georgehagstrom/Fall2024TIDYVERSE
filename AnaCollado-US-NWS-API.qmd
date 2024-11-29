@@ -1,0 +1,295 @@
+---
+title: "U.S. National Weather Service"
+subtitle: "Step by step process through the U.S. NWS API for a live seven day weather forcast"
+author: "Ana Collado"
+code-block-border: "#F8F8F8"
+monobackgroundcolor: "#F8F8F8"
+highlight-style: github
+code-tools: false
+code-overflow: "wrap"
+code-block-bg: true
+format:
+  html:
+    theme: cosmo
+    toc: true
+    number-sections: false
+---
+
+![](images/1.png){fig-align="center"}
+
+![](images/2.png){fig-align="center"}
+
+The U.S. National Weather Service is part of a federal agency that
+[monitors climate (longterm weather
+averages)](https://www.weather.gov/media/climateservices/WeatherAndClimate.pdf),
+provides weather forecasts, warnings, and general information to the
+public. Their data is openly available for use through its API for
+developers.
+
+![](images/1.png){fig-align="center"}
+
+#### Exploration Goal: Obtain 7-Day Forecast for New York
+
+The NWS website states the grid forecast can be obtained with coordinates.
+The longitude and latitude points for New York are 40.730610, -73.935242
+respectively.
+
+### ·Load Libraries:
+
+```{r output=FALSE}
+
+library(httr2)
+library(tidyverse)
+library(repurrrsive)
+library(ggplot2)
+```
+
+### ·Assigning Values:
+
+```{r}
+api_base_url <-  "https://api.weather.gov/"
+ny_coords <- "https://api.weather.gov/points/40.7128,-74.0060"
+```
+
+### ·Requesting from the API:
+
+```{r paged.print=TRUE}
+
+ask_api<- request(ny_coords) %>% 
+  req_perform()
+
+api_response<- 
+  resp_body_json(ask_api) %>% 
+  glimpse()
+
+```
+
+The `glimpse()` function shows all the groups of data for our chosen
+coordinates. Since our goal is to pull the weeks predicted weather, the
+information needed is stored in the endpoint named `$forecast` .
+
+```{r message=FALSE, warning=FALSE, paged.print=TRUE}
+
+#Assigning endpoint value
+forecast <- "https://api.weather.gov/gridpoints/OKX/33,35/forecast"
+
+#Requesting from the API again
+ask_again <- 
+  request(forecast) %>% 
+  req_perform()
+
+response_again <- 
+  resp_body_json(ask_again) %>% 
+  glimpse()
+
+```
+
+Now, we'll unnest and rectangle the data.
+
+### ·Converting to Tibble:
+
+```{r}
+response_df<- tibble(response_again)
+```
+
+```{r message=FALSE, warning=FALSE, output= FALSE }
+
+str(response_df) %>% 
+  print()
+
+```
+
+I encountered many errors in unnesting because of the *structure* of the
+data. When using `glimpse()` or `print()` the data seeemd as though I would
+point to `$properties` to unnest.
+
+![](images/4.png){style="border: 4px solid #1E3F66;" fig-align="center"}
+
+But in using `view()` the data looked different. `str()` shows whats inside
+in a very readable sort of way, but `view()` is perfect for
+identifying/naming the items in code. This format was **necessary** to
+point to the appropriate items to unnest.
+
+See below:
+
+![](images/5.png){style="border: 4px solid #1E3F66;"
+fig-alt="screenshot of forecast tibble" fig-align="center" width="600"
+height="204"}
+
+```{r}
+str(response_df$response_again[[4]]) %>% 
+  glimpse()
+```
+
+### ·Selecting the Lists to Unnest
+
+```{r message=FALSE, warning=FALSE, paged.print=TRUE, collapse=FALSE}
+
+forecast<- tibble(response_df$response_again[[4]])
+```
+
+Once the main list is selected, using the `$` button allows for items of
+interest to be selected and by extension the appropriate characters are
+used.
+
+::: {.callout-tip appearance="minimal"}
+"this will save a lot of time and error messages" - my past self
+:::
+
+![](images/6.png){style="border: 4px solid #1E3F66;" fig-align="center"}
+
+![](images/7.png){style="border: 4px solid #1E3F66;" fig-align="center"}
+
+```{r collapse=TRUE}
+forecast <- tibble(forecast$`response_df$response_again[[4]]`[[7]])
+
+forecast<- forecast %>%
+  unnest_wider(`forecast$\`response_df$response_again[[4]]\`[[7]]`) %>% 
+  print()
+```
+
+### ·Isolating Columns of Interest
+
+```{r}
+forecast<- forecast %>% 
+  select(number, name, startTime, temperature, temperatureUnit, shortForecast) %>% 
+  print()
+```
+
+### ·Finalizing the Data Frame Clean
+
+`$startTime` is in a character datatype although the datapoints are
+technically a date and time span. ~~While its completely possible to
+convert to reflect this, I will instead use the char type to select for
+"dates" and create a column that I can group into days of the week.~~
+
+I indeed had to come back to this code to fix it! The API will respond very
+time this code is run with my key, the data will change to reflect the time
+and the new forecast. It is absolutely necessary to use the `weekdays()` to
+auto populate day of the week depending on the ever changing `$startTime`
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, evaluate=FALSE, output=FALSE }
+
+forecast$startTime <- as.Date(forecast$startTime)
+
+forecast <- forecast %>%
+  mutate(day= weekdays(startTime)) %>% 
+  arrange(startTime) %>% 
+  group_by(startTime)
+
+```
+
+### ·Creating a Forecast Visualization using ggplot
+
+```{r fig.height=8, fig.width=8, message=FALSE, warning=FALSE}
+
+forecast %>%
+  ggplot(aes(day, temperature, fill= temperature))+
+  geom_line(linewidth = 50)+
+  facet_wrap(~day, scales = "free_x",
+             ncol = 7, axis.labels = "all_y", drop = TRUE)+
+  theme_minimal()+
+  theme(
+    panel.background = element_rect(fill = "#FFFFFF"),
+    panel.grid = element_line(colour ="#FFFFFF"))+
+  labs(title = "7 DAY FORECAST", caption = "")
+
+```
+
+### ·Addressing Issues
+
+The plot is close to what I intend, but there are several issues here that
+need to be addressed:
+
+1.  The API request outputs current forecast, the day of the week is not
+    specific enough.
+
+2.  The filled blocks should be color graded to better depict the high and
+    low of the day
+
+3.  The day of the week appears on both the top and bottom
+
+4.  Y axis label doesn't specify temperature unit
+
+5.  Weather forecast has an in between where the beginning of the window
+    has only once observation (night) and the end of the window only has
+    one observation (day). using geom_line is not efficient because it
+    requires two points within the grouping.\
+    EX:
+
+    ![](images/8.png)
+
+**#1** and **#3** can be fixed by changing the data type of `$startTime`
+after its adjusted, the column can be used as the x in the ggplot base.
+Then the plot will show the day of the week and the date instead of being
+redundant. The column name will appear in the x axis now but we can remove
+that.
+
+**#4** can be solved by adding a `ylab()` line to the ggplot code. **#2**
+however becomes a little more complicated. `geom_line()` does not support
+"fill". Its possible to use `geom_point()` in `shape = 15` (square) and
+pair it with `geom_line()`, then adjust the size and line widths to match
+in a way that seems like one large box. But even so the gradient wouldn't
+work.
+
+A possible fix pivoting wider so that the observations in `$name` that
+predict "night" temperature are in their own column. This way it would be
+easier to plot a range. But, for now, the visualization gets the point
+across.
+
+**#5** The API returns a single weather data point when the forecast window
+moves. `geom_tile()` was an easy fix, but the visualization is not as
+intended.
+
+### ·ggPlot redo
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+forecast %>%
+  ggplot(aes(day, temperature))+
+  geom_tile()+
+  facet_wrap(~startTime, scales = "free_x", nrow = 1,
+             axis.labels = "all_y", drop = TRUE)+
+  theme_minimal()+
+  theme(
+    panel.background = element_rect(fill = "#FFFFFF"),
+    panel.grid = element_line(colour ="#FFFFFF"))+
+  labs(title = "7 DAY FORECAST")+
+  xlab("")+
+  ylab("temperature (F)")
+
+```
+
+![](images/9.png)
+
+### ·Useful References
+
+::: {.panel-tabset style="fill: 4px solid #F8F8F8;"}
+## Text Format
+
+-   Note: Using Quarto for HTML Documents\
+    *"HTML Basics"*\
+    <https://quarto.org/docs/output-formats/html-basics.html>
+
+-   Note: Adjusting Chunks\
+    "*Options: Chunk Options and package options"*\
+    <https://yihui.org/knitr/options/#text-output>
+
+-   Note: Adjusting Facet themes\
+    *"The Art of Organization: Facets and Themes in ggplot2"*\
+    <https://medium.com/number-around-us/the-art-of-organization-facets-and-themes-in-ggplot2-5c591bb3c54c>
+
+-   Note: Starts with bigger picture and works inward to the minute
+    details\
+    *"WebDev4R: The Ultimate Guide To Get Data Through APIs With {httr2}
+    and R"*\
+    <https://albert-rapp.de/posts/web_dev/07_httr2_ultimate_guide/07_httr2>
+
+## Video Format
+
+-   FULL Text Control With ggplot & {marquee} \| Step-By-Step Tutorial\
+    <https://www.youtube.com/watch?v=a8a_kLaYRlg>
+
+-   How to Get Data From APIs with R & {httr2} \| Ultimate Step-By-Step
+    Tutorial\
+    <https://www.youtube.com/watch?v=hmtE4QGIOuk>
+:::
