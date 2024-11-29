@@ -50,7 +50,7 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 
 21. Alex Ptacek EXTEND, NWS 7day API <https://weather-gov.github.io/api/general-faqs>
 
-22. Ana Collado, TidyverseCREATE Project, US National Weather Service API, 
-    API: <https://www.weather.gov/documentation/services-web-api>
-    Project Site: <https://anacolla2.github.io/US-NWS-API-Project/>
-    Desc: A step by step process through the U.S. NWS API for a live seven day weather forcast
+22. Ana Collado, TidyverseCREATE Project, US National Weather Service API,<br>
+    -API: <https://www.weather.gov/documentation/services-web-api> <br>
+    -Project Site: <https://anacolla2.github.io/US-NWS-API-Project/> <br>
+    -Desc: A step by step process through the U.S. NWS API for a live seven day weather forcast
