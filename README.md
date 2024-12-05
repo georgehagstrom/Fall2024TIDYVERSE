@@ -54,3 +54,6 @@ Add a few lines to this readme with your name, the api you selected, and a descr
     -API: <https://www.weather.gov/documentation/services-web-api> <br>
     -Project Site: <https://anacolla2.github.io/US-NWS-API-Project/> <br>
     -Desc: A step by step process through the U.S. NWS API for a live seven day weather forcast
+    
+24. Rupendra Shrestha, Weather Alert API <https://www.weather.gov/documentation/services-web-api> Extended Code of **Curtis Elsasser 
+    USDA API [FoodData Central API Guide](https://fdc.nal.usda.gov/api-guide.html)
