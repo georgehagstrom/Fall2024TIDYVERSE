@@ -1,0 +1,370 @@
+---
+title: "USDA FoodData Central - Extended Code of Curtis Elsasser"
+author: "Rupendra Shrestha"
+format: 
+  html:
+    
+    embed-resources: true
+editor: source
+editor_options: 
+  chunk_output_type: console
+---
+
+#### Reference
+* [FoodData Central API Guide](https://fdc.nal.usda.gov/api-guide.html)
+* [FoodData Central Data Types](https://fdc.nal.usda.gov/data-documentation.html)
+
+#### Introduction
+I have decided to use the USDA FoodData Central API for this project. It was my second choice. My first, which was to treat Wikipedia like a data source, but it didn't work out the way I had hoped. Perhaps it was fate working in my favor, the USDA provides a wealth of information about food and nutrition and how nutritional values are quantified. 
+
+We have the option of working with "foundation" foods or "branded" food. Foundation foods are the raw ingredients that make up the branded foods. For example, a branded food might be a "Big Mac" while the foundation foods would be the beef, cheese, lettuce, etc. that make up the Big Mac. It would be pretty fascinating and fun to see the nutritional breakdown of a Big Mac, nevertheless, we are going to start at the beginning and stick with the foundation foods for this project. Additionally, we got our hands a little dirty with branded data in DATA606's normal distribution lab.
+
+##### API Limiting
+According to the [USDA](https://api.data.gov/docs/developer-manual/): Limits are placed on the number of API requests you may make using your API key. Rate limits may vary by service, but the defaults are:
+
+* Hourly Limit: 1,000 requests per hour per API key
+
+It wasn't necessary for us to throtle our requests. The number of requests that we make in this project falls well below the hourly limit. 
+
+#### Setup
+```{r}
+#| warning: false
+library(httr2)
+library(jsonlite)
+library(tidyverse)
+```
+
+
+#### Global Variables
+```{r}
+api_key = readLines("Rupendra_api_key.txt", n = 1)
+source_domain = "https://api.nal.usda.gov"
+source_root = "fdc/v1"
+```
+
+#### Wee little helpers
+```{r}
+build_food_request <- function(fdcId) {
+  request(source_domain) |>
+    req_method("GET") |>
+    req_url_path(str_c(source_root, "food", fdcId, sep = "/")) |>
+    req_url_query(api_key = api_key) |>
+    req_url_query(format= "full")
+}
+
+build_food_list_request <- function(page = 1, pageSize = 50) {
+  request(source_domain) |>
+    req_method("GET") |>
+    req_url_path(str_c(source_root, "foods/list", sep = "/")) |>
+    req_url_query(api_key = api_key) |>
+    req_url_query(dataType = "Foundation") |>
+    req_url_query(pageNumber = page) |>
+    req_url_query(pageSize = pageSize)
+}
+```
+
+#### Get Food Details
+I am using their food list to get a list of the foundation foods. When I looked at the API and saw that there is a `food` endpoint, I assumed that `foods/list` was going to be a bare-bones list of food items. I was wrong. It is a list of food items with a full nutritional breakdown. So what does `food` do? 
+
+```{r}
+#| eval: false
+build_food_request(2685580) |>
+  req_perform() |>
+  resp_body_string()
+```
+
+Ah, he gives us `nutrientAnalysisDetails` in addition to the nutritional breakdown. It appears to identify the labs and techniques used to determine the nutrient values as well as the measured values. This is pretty neat. The output is enormous. We'll turn him off and include an excerpt. It may be of interest for the follow up assignment.
+
+```{json}
+{
+    "fdcId": 2685580,
+    "description": "Tomato, paste, canned, without salt added",
+    "publicationDate": "4/18/2024",
+    "foodNutrients": [
+        {
+            "type": "FoodNutrient",
+            "nutrient": {
+                "id": 1051,
+                "number": "255",
+                "name": "Water",
+                "rank": 100,
+                "unitName": "g"
+            },
+            "foodNutrientDerivation": {
+                "id": 1,
+                "code": "A",
+                "description": "Analytical",
+                "foodNutrientSource": {
+                    "id": 1,
+                    "code": "1",
+                    "description": "Analytical or derived from analytical"
+                }
+            },
+            "id": 33831341,
+            "amount": 71.93000000,
+            "dataPoints": 8,
+            "max": 73.43000000,
+            "min": 67.82000000,
+            "median": 72.40000000,
+            "minYearAcquired": 2023,
+            "nutrientAnalysisDetails": [
+                {
+                    "subSampleId": 2685904,
+                    "nutrientId": 1051,
+                    "nutrientAcquisitionDetails": [
+                        {
+                            "sampleUnitId": 2685775,
+                            "purchaseDate": "11/30/2023",
+                            "storeCity": "Greenbelt",
+                            "storeState": "MD",
+                            "packerCity": "Minneapolis",
+                            "packerState": "MN"
+                        }
+                    ],
+                    "amount": 72.11,
+                    "labMethodTechnique": "Vacuum oven",
+                    "labMethodDescription": "AOAC 934.06 mod",
+                    "labMethodOriginalDescription": "AOAC 934.06 (37.1.10) Moisture in Fruits, Vegetables, and their Products",
+                    "labMethodLink": "https://doi.org/10.1093/9780197610145.001.0001"
+                },
+                {
+                    "subSampleId": 2685905,
+                    "nutrientId": 1051,
+                    "nutrientAcquisitionDetails": [
+                        {
+                            "sampleUnitId": 2685777,
+                            "purchaseDate": "11/30/2023",
+                            "storeCity": "Greenbelt",
+                            "storeState": "MD",
+                            "packerCity": "Rochelle Park",
+                            "packerState": "NJ"
+                        }
+                    ],
+                    "amount": 67.82,
+                    "labMethodTechnique": "Vacuum oven",
+                    "labMethodDescription": "AOAC 934.06 mod",
+                    "labMethodOriginalDescription": "AOAC 934.06 (37.1.10) Moisture in Fruits, Vegetables, and their Products",
+                    "labMethodLink": "https://doi.org/10.1093/9780197610145.001.0001"
+                }
+            ]
+        }
+    ]
+}
+```
+
+Hmmm, I don't see a way via the USDA API to get a total number of pages. I want to keep going until we get an empty list back. I'm not totally (at all) sure how to do this with `map`. I know how to do it the old fashioned way, so I am going to do it the way of yore.
+
+```{r}
+food_list <- list()
+page <- 1
+while (TRUE) {
+  json <- build_food_list_request(page) |>
+    req_perform() |>
+    resp_body_json()
+  print(page)
+  if (length(json) == 0) {
+    break
+  } else {
+    # this is unintentionally doing us a little favor by flattening the pages by 
+    # food item.
+    food_list <- c(food_list, json)
+    page <- page + 1
+  }
+}
+
+```
+
+Our pages have been flattened by `c`. Now we want to flatten `foodNutrients` and that will give a nice tidy data frame.
+
+:::{.callout-warning}
+Mass (g) and energy (caloris/joules) live together in `amount` and ideally they would not. I would separate them but it's going to take a little more time to do so. The relationship between joules and food items isn't totally clear to me. I assumed it would be a one to one relationship, but there are more calories/joules measurements than food items: 
+
+* fdcIds: 316
+* KCAL:	472			
+* kJ:	97	
+
+My analysis focuses on mass, I will leave the energy task for another stage of this project.
+:::
+
+```{r}
+food_tbl <- NULL
+for (food in food_list) {
+  df <- as_tibble(food)
+  df <- unnest_wider(df, foodNutrients)
+  if (is.null(food_tbl)) {
+    food_tbl <- df
+  } else {
+    food_tbl <- rbind(food_tbl, df)
+  }
+}
+```
+
+#### Data Cleaning
+Let's see what we got.
+
+```{r}
+glimpse(food_tbl)
+```
+
+```{r}
+food_tbl |>
+  mutate(
+    unitName = as_factor(unitName)
+  ) |>
+  count(unitName)
+```
+
+Let's convert the units of mass to grams and leave the rest for another day. Change of plan: we left a note above regarding the dual purpose of `amount`. As a first step in dividing it we are going to convert all units of mass to grams and save it to `amount_g`. And we will also take the log of `amount_g` and save it to `amount_lg` for reasons that will become apparent in visualization.
+
+```{r}
+food_tbl <- food_tbl |>
+  mutate(
+    amount_g = case_when(
+      (unitName == "MG") ~ amount / 1000,
+      (unitName == "UG") ~ amount / 1000000,
+      (unitName == "G") ~ amount,
+      .default = NA,
+    ),
+    amount_lg = ifelse(!is.na(amount_g) & amount_g > 0,  log(amount_g), NA)
+  )
+```
+
+Let's see what our descriptive stats looks like.
+```{r}
+summary(food_tbl)
+```
+
+
+#### Visualization
+I am eager to see the breakdown of nutrients per food item, but first, let's get a handle on mass. 
+
+```{r}
+#| fig-height: 12
+#| fig-width: 8
+food_tbl |>
+  filter(!is.na(amount)) |>
+  ggplot(mapping = aes(x = amount)) +
+  geom_histogram(bins = 50) +
+  facet_wrap(~ unitName, ncol = 2, scales = "free") +
+  labs(
+    title = "Distribution of amount",
+    x = "",
+    y = "Count"
+  )
+```
+
+Focusing on grams, so much is concentrated around 0 for every unit of gram. Let's try a log plot of our variable in grams and see what that looks like.
+
+```{r}
+food_tbl |>
+  filter(!is.na(amount_lg)) |>
+  ggplot(mapping = aes(x = amount_lg)) +
+  geom_histogram(bins = 50) +
+  labs(
+    title = "Log Distribution of Grams",
+    x = "log(Grams)",
+    y = "Count"
+  )
+
+```
+
+Welly, welly, welly, that's pretty useful. We have nice distribution now and can clearly see the lay of the gram land.
+
+For a final visualization for this stage of the project, we would like to see the relative amount of each nutrient per food item. I am going to use our log scale for the y-axis. We will have a LOT of facets, but...hey, virtual paper is cheap and environmentally friendly.
+Thanks stackoverflow - [How to rotate x-axis labels in ggplot2](https://stackoverflow.com/questions/1330989/rotating-and-spacing-axis-labels-in-ggplot2)!
+
+Plotting all 316 food items is too much. We will plot the those that start with "A".
+
+```{r}
+#| fig-height: 72
+#| fig-width: 8
+food_tbl |>
+  filter(!is.na(amount_lg)) |>
+  filter(str_starts(description, "A")) |>
+  ggplot(mapping = aes(x = name, y = amount_lg)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  facet_wrap(~ description, ncol = 1, scales = "free") +
+  labs(
+    title = "Nutrient Breakdown per Food Item",
+    x = "Nutrient",
+    y = "log(Grams)"
+  )
+```
+## Rupendra
+
+# Enchanged this code with additional annotation code.
+```{r}
+# Comparison two set of foods
+# Filter foods starting with 'B' and 'C'
+food_tbl_new <- food_tbl |>
+  filter(str_starts(description, "B") | str_starts(description, "C"))
+
+# Visualize the comparison
+food_tbl_new |>
+  filter(!is.na(amount_lg)) |>
+  ggplot(aes(x = name, y = amount_lg, fill = description)) +
+  geom_col(position = "dodge") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  facet_wrap(~ description, ncol = 2, scales = "free") +
+  labs(
+    title = "Comparison of Nutrients for Foods Starting with 'B' and 'C'",
+    x = "Nutrient",
+    y = "log(Grams)",
+    fill = "Food Item"
+  )
+
+```
+
+This example compare foods starting with 'B' and 'C' to highlight nutrient differences.
+
+# I have analyzed nutrient quantities of all foods.
+
+```{r} 
+
+all_nutrients <- food_tbl |>
+  group_by(name) |>
+  summarize(total_g = sum(amount_g, na.rm = TRUE)) |>
+  arrange(desc(total_g))
+
+
+  all_nutrients |>
+    slice_max(total_g, n = 10) |>
+    ggplot(aes(x = reorder(name, total_g), y = total_g)) +
+    geom_bar(stat = "identity", fill = "steelblue") +
+    coord_flip() +
+    labs(
+      title = "Top 10 Nutrients by Total Grams",
+      x = "Nutrient",
+      y = "Total Grams"
+    )
+
+
+glimpse(all_nutrients)
+
+# Check the top 10 rows
+all_nutrients |>
+  slice_max(total_g, n = 10) |>
+  print()
+
+```
+
+# Analyze vitamine related nutrient
+```{r}
+# Filter vitamin-related nutrients
+vitamins_tbl <- food_tbl |>
+  filter(str_detect(name, "Vitamin"))
+
+# Plot vitamin distributions
+vitamins_tbl |>
+  filter(!is.na(amount_lg)) |>
+  ggplot(aes(x = name, y = amount_lg)) +
+  geom_boxplot(fill = "lightgreen") +
+  labs(
+    title = "Distribution of Vitamin Nutrients",
+    x = "Vitamin",
+    y = "log(Grams)"
+  )
+
+```
+
