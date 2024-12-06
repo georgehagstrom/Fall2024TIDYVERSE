@@ -3,6 +3,8 @@ title: "Tidyverse Create: Urban Institute API"
 author: "Amanda Rose Knudsen"
 format: html
 editor: source
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r}
@@ -176,3 +178,19 @@ ggplot() +
 ```
 
 Now, we have a clear visualization of English Language Learners (ELLs) and enrollment that vary across New York State counties.
+
+
+# Tidyverse EXTEND by: Alex Ptacek
+
+Let's examine the relationship between number of grades offered and enrollment count.
+
+```{r}
+response_data3_tibble |> 
+  mutate(grades_offered = highest_grade_offered - lowest_grade_offered) |> 
+  ggplot(aes(x = grades_offered, y = enrollment)) +
+  geom_bar(stat = "identity") +
+  scale_x_continuous(breaks = seq(1,10,2), limits = c(1,10))
+```
+
+We can see that this enrollment by grades offered is almost normally distributed, even though we'd expect enrollment to increase as grades_offered increases.
+
