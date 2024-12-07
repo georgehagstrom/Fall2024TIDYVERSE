@@ -1,0 +1,62 @@
+---
+title: "US Total Public Debt Code Vignette"
+author: "Henock Montcho"
+format: pdf
+editor: visual
+---
+
+## [I- Introduction:]{.underline}
+
+The Debt to the Penny dataset provides information about the total outstanding public debt and is reported each day. Debt to the Penny is made up of intragovernmental holdings and debt held by the public, including securities issued by the U.S. Treasury. Total public debt outstanding is composed of Treasury Bills, Notes, Bonds, Treasury Inflation-Protected Securities (TIPS), Floating Rate Notes (FRNs), and Federal Financing Bank (FFB) securities, as well as Domestic Series, Foreign Series, State and Local Government Series (SLGS), U.S. Savings Securities, and Government Account Series (GAS) securities. Debt to the Penny is updated at the end of each business day with data from the previous business day.
+
+This case study will solely focus on the Debt to the Penny, and the `httr2` package will be used for the exploration. The endstate is to depict the growth of the U.S debt throughout the years: from 1993 through 2025 (projected).
+
+The documentation for this API is located here: <https://fiscaldata.treasury.gov/datasets/debt-to-the-penny/debt-to-the-penny>.
+
+## [II- Accessing the API to Download the Debt to the Penny data:]{.underline}
+
+The goal of this code is to extract the data of interest in form of a tibble, and then perform some light analysis.
+
+```{r}
+#| echo: true
+library(jsonlite)
+library(tibblify)
+library(tidyr)
+library(dplyr)
+library(httr2)
+library(tidyverse)
+library(ggplot2)
+
+#At this step, an `httr2` main request is built. 
+fiscal_data_url = "https://api.fiscaldata.treasury.gov/services/api/fiscal_service"
+req_fiscal_data = fiscal_data_url  |>
+  request()
+
+#At this step, request is sent to the "debt to penny" endpoint via a specific path. The dataset contains 7930 rows and we need to select the entire dataset.
+annual_debt <- req_fiscal_data  |>
+  req_url_path_append("/v2/accounting/od/debt_to_penny?page[number]=1&page[size]=7930")  |>
+  req_perform()  |>
+  resp_body_json()
+
+#At this step, we did some data extraction to only retain the data of our interest: year and annual debt by year.
+annual_debt <- annual_debt$data  |>
+  tibblify()  |>
+  select(record_fiscal_year, tot_pub_debt_out_amt)  |>
+  mutate(tot_pub_debt_out_amt = as.numeric(tot_pub_debt_out_amt))  |>
+  rename(year = record_fiscal_year, total_debt = tot_pub_debt_out_amt)  |>
+  group_by(year)  |>
+  summarise(annual_debt = mean(total_debt))
+  
+#At this stage, we visualize our data to have a better feel.
+annual_debt  |>
+  ggplot(aes(x = year, y = annual_debt))+
+  geom_point()+
+  labs(title = "US Total Public Debt from 1993 through 2025")+
+  scale_x_discrete(breaks = seq(1993, 2025, by = 2))+
+  scale_y_continuous(labels = scales::comma, breaks = seq(0, 36000000000000, by = 5000000000000))
+
+```
+
+## [Conclusion:]{.underline}
+
+The U.S total debt has been constantly increasing year after year for the past 30 years. There is not a single year where the total debt is less than the previous year's one . It is urgent that government takes measures to have the level of public debt under control.
