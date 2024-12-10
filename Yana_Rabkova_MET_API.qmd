@@ -1,19 +1,11 @@
-
 ---
 title: "Tidyverse Create"
-format: 
-  pdf: 
-    keep-tex: true
-editor: source
 author: "Yana Rabkova"
+format: html
+editor: visual
 ---
 
-
-```{r, global_options, include=FALSE}
-#| column: margin 
-```
-
-```{r}
+```{r echo=TRUE, include=FALSE}
 library(httr2)
 library(tidyverse)
 library(jsonlite)
@@ -21,15 +13,19 @@ library(tibblify)
 library(lubridate)
 ```
 
-The API I’m using is from the Metropolitan Museum of Art’s Public Collection. It gives you access to a ton of information about their art collection, like:
-  Object ID: A unique ID for each piece of artwork.
-  Artist Info: Details about the artist, such as their name, nationality, and bio.
-  Object Details: Information about the artwork itself, like materials, size, and when it was created.
-  Cultural and Geographic Data: The culture and region tied to the artwork.
-  Images: Links to images of the art.
-  Classification and Period: Types of art and when it was made.
+The API I’m using is from the Metropolitan Museum of Art’s Public
+Collection. It gives you access to a ton of information about their art
+collection, like: Object ID: A unique ID for each piece of artwork. Artist
+Info: Details about the artist, such as their name, nationality, and bio.
+Object Details: Information about the artwork itself, like materials, size,
+and when it was created. Cultural and Geographic Data: The culture and
+region tied to the artwork. Images: Links to images of the art.
+Classification and Period: Types of art and when it was made.
 
-I want to explore the gender and nationality of the artists in the museum’s collection. My goal is to find out which nationalities are most common and whether there are any noticeable trends in the gender representation of artists across the collection.
+I want to explore the gender and nationality of the artists in the museum’s
+collection. My goal is to find out which nationalities are most common and
+whether there are any noticeable trends in the gender representation of
+artists across the collection.
 
 ```{r}
 
@@ -102,7 +98,6 @@ print(met_data_all)
 
 ```
 
-
 ```{r}
 #visualizations
 
@@ -128,17 +123,30 @@ met_data_all %>%
 
 #If I am requesting just the first 1000 objects, why do we have 1100 observations? is it possible that we have duplicate entries for the same objectIDs? this probably needs further investigation
 ```
-The gender data from the Metropolitan Museum of Art's collection API shows a significant gap in information. Out of the total 1,100 objects, only 5 have gender information recorded as female, while the rest (1,095 objects) either have no gender data or are assumed to be male? According to the API instructions, only female gender designations are included, which suggests that the data is incomplete. The absence of gender information does not necessarily mean the artists are male.
 
-Based on the other two visualizations regarding culture and artists' nationalities, we can conclude that the dataset predominantly features American artists, at least within the first 1,000 objects.
+The gender data from the Metropolitan Museum of Art's collection API shows
+a significant gap in information. Out of the total 1,100 objects, only 5
+have gender information recorded as female, while the rest (1,095 objects)
+either have no gender data or are assumed to be male? According to the API
+instructions, only female gender designations are included, which suggests
+that the data is incomplete. The absence of gender information does not
+necessarily mean the artists are male.
 
----------------------
-Andreina Abreu - Annotated Extention 
+Based on the other two visualizations regarding culture and artists'
+nationalities, we can conclude that the dataset predominantly features
+American artists, at least within the first 1,000 objects.
 
-To explore time-based trends and distributions, I'll introduce an extension that examines when the artworks were created. This will provide an additional dimension to the analysis, helping to uncover any patterns in historical or cultural representation over time.
+---------------------------------------------------------------------------
 
+Andreina Abreu- Annotated Extension
+
+To explore time-based trends and distributions, I'll introduce an extension
+that examines when the artworks were created. This will provide an
+additional dimension to the analysis, helping to uncover any patterns in
+historical or cultural representation over time.
 
 ```{r}
+
 # Extracting date-created information for further analysis
 met_data_all <- met_data_all %>% 
   mutate(objectBeginDate = as.numeric(objectBeginDate), 
@@ -155,11 +163,13 @@ ggplot(met_data_all, aes(x = objectBeginDate)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
---------------------
 
-Hugo Vega - addition 
-**Missing Data Analysis**
-Dive deeper into which fields (like gender, nationality, or culture) tend to have missing data. Understanding the gaps can help interpret the results more accurately.
+---------------------------------------------------------------------------
+
+Hugo Vega - addition **Missing Data Analysis** Dive deeper into which
+fields (like gender, nationality, or culture) tend to have missing data.
+Understanding the gaps can help interpret the results more accurately.
+
 ```{r}
 # Analyzing missing data for key fields
 missing_data_summary <- met_data_all %>% 
@@ -174,8 +184,11 @@ ggplot(missing_data_summary, aes(x = Field, y = MissingProportion)) +
        x = "Field",
        y = "Proportion Missing")
 ```
-**Cultural Representation Over Time**
-Investigate how cultural representation (e.g., specific "cultures") changes over time. Are certain cultures more represented in certain historical periods?
+
+**Cultural Representation Over Time** Investigate how cultural
+representation (e.g., specific "cultures") changes over time. Are certain
+cultures more represented in certain historical periods?
+
 ```{r}
 # Artist nationality trends over time
 ggplot(met_data_all, aes(x = objectBeginDate, fill = artistNationality)) +
@@ -187,8 +200,10 @@ ggplot(met_data_all, aes(x = objectBeginDate, fill = artistNationality)) +
        fill = "Artist Nationality") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-**Artist Nationality Trends Over Time**
-Examine how the distribution of artist nationalities shifts across centuries or decades.
+
+**Artist Nationality Trends Over Time** Examine how the distribution of
+artist nationalities shifts across centuries or decades.
+
 ```{r}
 # Artist nationality trends over time
 ggplot(met_data_all, aes(x = objectBeginDate, fill = artistNationality)) +
@@ -200,8 +215,10 @@ ggplot(met_data_all, aes(x = objectBeginDate, fill = artistNationality)) +
        fill = "Artist Nationality") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-**Material Usage Over Time**
-Explore trends in materials used in artwork creation over time to analyze artistic evolution.
+
+**Material Usage Over Time** Explore trends in materials used in artwork
+creation over time to analyze artistic evolution.
+
 ```{r}
 # Material trends over time
 met_data_all %>%
@@ -216,8 +233,11 @@ met_data_all %>%
        color = "Material") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-**Cluster Analysis**
-If enough attributes are available (e.g., materials, cultures, time periods), clustering the objects might reveal interesting patterns or groupings in the collection.
+
+**Cluster Analysis** If enough attributes are available (e.g., materials,
+cultures, time periods), clustering the objects might reveal interesting
+patterns or groupings in the collection.
+
 ```{r}
 # Example of clustering using selected features
 library(cluster)
@@ -247,3 +267,145 @@ ggplot(met_data_all, aes(x = objectBeginDate, y = objectEndDate, color = Cluster
        y = "Ending Year",
        color = "Cluster")
 ```
+
+---------------------------------------------------------------------------
+
+## TidyExtend- Ana Collado
+
+Yana's API project explores the collection in the Met museum. Upon her
+exploration, she concludes the first 1,000 objects are predominantly from
+American artists. There are several ways upon I wished to extend the
+project, but I hit a snag in the process.
+
+The latest version of Yana's project (which has been extended a couple of
+times) allowed for edits in the source code but did not run those edits. I
+decided to change to "Visual" mode for comfort in figuring out what the
+issue could be. In doing so, RStudio alerted me to a parsing error.
+
+![](images/Error%20in%20switching.png){fig-align="center"}
+
+Closed Rstudio, downloaded the file from Github again along with another
+classmate's project file, just to test whether the error was a product of
+my own setup. I opened both files in RStudio and while the test file worked
+just fine, Yana's file did not.
+
+![](images/other_file_test.png){fig-align="center"}
+
+I decided to copy and paste the contents of the file into a new file in the
+original qmd format on visual mode. The culprit of the error appeared. One
+of the Extend codes was within a table and a code chunk was within the
+table. While the chunk seems normal in source mode the code appears
+incorrectly in visual mode. (see image below)
+
+![](images/Parsing%20error.png){fig-align="center" width="535"}
+
+I copied the actual extend code from the original file and pasted it in to
+an rchunk on visual mode in the new file, which seemed to fix the problem.
+To reiterate I have copy and pasted all the contents of the original file
+into this new qmd. The only thing I have modified is Andreina's Extend
+section in moving her plain-text content from the table directly on to the
+editor and her R code into a code chunk.
+
+With that said, now that the file is functioning for me, we'll move into
+the part of Yana's project I felt compelled to check out.
+
+There is a dimensions column and I though it would be interesting to see if
+size could play a part in the volume of american pieces.
+
+### Extracting the next 1000
+
+```{r Pulling the next thousand using Yana's code'}
+#how many objects in total are there?
+objects_url <- "https://collectionapi.metmuseum.org/public/collection/v1/objects"
+
+objects_req <- request(objects_url)
+objects_data <- objects_req |> 
+  req_perform() |> 
+  resp_body_json()
+total_objects <- objects_data$objectIDs
+
+#there are 491122 objects, I will extract data for the first 1000 objects 
+
+#function
+process_met_object <- function(object_id) {
+  met_url <- paste0("https://collectionapi.metmuseum.org/public/collection/v1/objects/", object_id)
+
+  met_req <- request(met_url)
+  met_data <- met_req |>  
+    req_perform() |> 
+    resp_body_json()
+
+  if (is.list(met_data)) {
+
+    met_data <- met_data[!sapply(met_data, function(x) all(is.null(x) | length(x) == 0))]
+    
+    met_data$additionalImages <- list(NULL) 
+    met_data$tags <- list(NULL) 
+  }
+
+
+  as_tibble(met_data)
+}
+
+object_ids2 <- 1001:2001
+
+met_data_list2 <- map(object_ids2, ~tryCatch(process_met_object(.), error = function(e) NULL))
+
+
+met_data_list2 <- met_data_list2[!sapply(met_data_list2, is.null)]
+
+met_data_all2 <- bind_rows(met_data_list2)
+
+
+print(met_data_all2)
+```
+
+```{r `Identifying Duplicates`}
+
+duplicates1<- met_data_all %>%
+  count(objectID, name = "count") %>% 
+  filter(count > 1) %>% 
+  select(objectID)
+
+duplicates2<- met_data_all2 %>%
+  count(objectID, name = "count") %>% 
+  filter(count > 1) %>% 
+  select(objectID)
+
+duplicates <- full_join(x = duplicates1, y = duplicates2, by = "objectID")
+rm(duplicates1, duplicates2)
+
+
+```
+
+```{r `Left Joining for Details`}
+
+duplicates <- left_join(x = duplicates, y = met_data_all, by = "objectID", unmatched = "drop", relationship = "one-to-many", keep = FALSE, multiple = "all")
+
+print(duplicates)
+
+duplicates %>%
+  select(objectID, constituents.x, constituents.y) %>% 
+  view()
+
+```
+
+Yana was right to suspect duplicate entries. The duplicated `objectIDs`
+seem to have branched because of the `constituents` column.
+
+![](images/const_id.png){fig-align="center" width="411"}
+
+I would recommend unnesting them and examining further differences between
+the items. This would take some expertise, considering these are pieces in
+a museum, it is perfectly possible that one piece could be composed of
+multiple pieces in a set, or shattered pieces. For example. `objectID` #261
+is a duplicate. One entry is with `constituentID` 1103 and the other with
+`constituentID` 215281. One is public domain, one is not, both are
+armchairs and one has an image but the other does not, but we can assume
+they were a set of two armchairs (as that is typical).
+
+![](images/clipboard-2844092282.png)
+
+Its feels safe to say that the museum might have a system in the way they
+manage their collection. I would assume duplicate `objectID`s are not
+erroneous duplicates!
