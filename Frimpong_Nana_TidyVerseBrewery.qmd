@@ -15,10 +15,9 @@ library(tidyr)
 library(dplyr)
 ```
 
+##Description
 
-##Description 
-
-This is Brewery API the list details about  fifty breweries in the United States with details about their brewery type and location. Some brewery have different production levels based on their size and their consumer volume.  A microbrewery is small brewery that produce low volume of beer and large brewery produce a high volume of beer. A closed brewery sells their beer through a distribution network and sells directly to their customers. A contract brewery produce beer for a another company, because they have agreement through a license. A brewpub produces their beer on site and serves it a bar or restaurant. A proprietor is brewery that owned by group of people or an individual. A question we can explore, is the relationship between bee type and location and the type of beer production a city will specilize in
+This is Brewery API the list details about fifty breweries in the United States with details about their brewery type and location. Some brewery have different production levels based on their size and their consumer volume. A microbrewery is small brewery that produce low volume of beer and large brewery produce a high volume of beer. A closed brewery sells their beer through a distribution network and sells directly to their customers. A contract brewery produce beer for a another company, because they have agreement through a license. A brewpub produces their beer on site and serves it a bar or restaurant. A proprietor is brewery that owned by group of people or an individual. A question we can explore, is the relationship between bee type and location and the type of beer production a city will specilize in
 
 ```{r}
 beer_url = "https://api.openbrewerydb.org/v1/breweries"
@@ -47,8 +46,8 @@ chars  %>%
   unnest_wider(json)
 ```
 
+I chose name , brewery_type, city, state,longitude, and latitude, because it was easier to plot data sets based on these variables. Also cleaning it would have been much simple set.
 
-I chose name , brewery_type, city, state,longitude, and latitude, because it was easier to plot data sets based on these variables. Also cleaning it would have been much simple set. 
 ```{r}
 beer_characters  = chars %>% 
   unnest_wider(json) %>% 
@@ -57,6 +56,7 @@ beer_characters
 ```
 
 Here I use count to find the top cities with the most breweries, because brewery production maybe be more accessible in some cities than others.
+
 ```{r}
 breweries_by_city = beer_characters %>%
   count(city) %>%
@@ -72,9 +72,6 @@ brewery_type_state <- beer_characters %>%
 brewery_type_state
 ```
 
-
-
-
 ```{r}
 # Looking for some missing columns, that could have affect on my plot 
 missing_data <- beer_characters %>%
@@ -88,6 +85,7 @@ missing_data
 ```
 
 Oregon has the higest the count of breweries across the country and with Delaware being the highest. Oregon has an ideal climate for growign crops and has long history of pioneers that started the beer culture.
+
 ```{r}
 beer_characters %>%
   count(state) %>%
@@ -112,8 +110,6 @@ top_cities =  beer_characters %>%
 top_cities
 ```
 
-
-
 ```{r}
 beer_characters %>%
   filter(city %in% top_cities) %>%
@@ -131,16 +127,15 @@ beer_characters %>%
 
 ```
 
-```{r}#
-install.packages("usmap")
-```
+`{r}# install.packages("usmap")`
+
 ```{r}
 library(usmap)
 library(ggplot2)
 ```
 
-
 Used a map to visulize which type of brewery production is popular in the state. Some states dont have any data regarding their brewery production and are colored in with grey. There are 24 states without such data, which does impact on the story telling of our data.
+
 ```{r}
 plot_usmap(
   color = "white",
@@ -151,6 +146,3 @@ plot_usmap(
 ) 
 
 ```
-
-
-
