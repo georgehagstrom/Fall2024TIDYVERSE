@@ -66,4 +66,5 @@ Add a few lines to this readme with your name, the api you selected, and a descr
 
 26. Ana Collado, TidyEXTEND Project, "Yana Rabkova, The Metropolitan Museum of Art Collection API"
 
-27, Nana Frimpong, Tidyextend project of "Rupendra Shrestha" - Accessing the National Weather Service API 
+27, Nana Frimpong, Tidy Beer project Project project 
+Tidyextend project of "Rupendra Shrestha" - Accessing the National Weather Service API  by creating windspeed and dewpoint plots
