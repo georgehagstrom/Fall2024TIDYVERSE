@@ -234,7 +234,7 @@ This is also interesting for the same reason, at a glance it very easy to see th
 
 
 
-### Extended Data 
+### Extended Data  Nana Frimpong
 I choose to visuallize the dewpints at hourly rate and windspeed mph in hourly rate. 
 ```{r}
 # Dew Point Temperature Visualization
