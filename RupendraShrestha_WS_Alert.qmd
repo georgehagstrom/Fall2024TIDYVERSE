@@ -232,5 +232,51 @@ forecast_tbl |>
 ```
 This is also interesting for the same reason, at a glance it very easy to see the dominant probabilities of precipitation in the forecast. At the moment, it's looking very dry, as it rains outside. Is this thing working!?! :)
 
+
+
+### Extended Data 
+I choose to visuallize the dewpints at hourly rate and windspeed mph in hourly rate. 
+```{r}
+# Dew Point Temperature Visualization
+forecast_tbl |>
+  ggplot(mapping = aes(
+    x = startTime, 
+    y = dewpoint_value, 
+    color = dewpoint_value
+  )) +
+  geom_line() +
+  scale_color_gradient(low = "#654321", high = "#f4a460", name = "Dew Point (°F)") +
+  labs(
+    title = "Hourly Dew Point Forecast",
+    x = "Time",
+    y = "Dew Point (°F)"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+# Wind Speed Visualization
+forecast_tbl |>
+  ggplot(mapping = aes(
+    x = startTime, 
+    y = windSpeed, 
+    color = as.numeric(str_extract(windSpeed, "\\d+"))
+  )) +
+  geom_line() +
+  scale_color_gradient(low = "lightblue", high = "red", name = "Wind Speed (mph)") +
+  labs(
+    title = "Hourly Wind Speed Forecast",
+    x = "Time",
+    y = "Wind Speed (mph)"
+  ) +
+  theme_minimal()
+
+```
+
+
+
+
+
 ## Conclusion
 It was fun extending Rupendra's work and I think it was a fruitful collaboration. We now have alerts and the ability to look around the corner and see what the NWS thinks is coming. 
