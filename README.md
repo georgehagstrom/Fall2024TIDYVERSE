@@ -72,3 +72,5 @@ Tidyextend project of "Rupendra Shrestha" - Accessing the National Weather Servi
 28. Cameron Gray, NWS API, <https://api.weather.gov>
 
 29. Cameron Gray, TidyEXTEND, "Henock Montcho, US Total Public Debt API"
+
+30. Tai Chou-Kudu, MET API, Extension of "Yana Rabkova - The Metropolitan Museum of Art Collection API" - exploring Chinese art in the MET
