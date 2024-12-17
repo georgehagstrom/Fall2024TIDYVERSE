@@ -1,0 +1,88 @@
+---
+title: "DATA607_TidyCreate_CameronGray"
+author: "Cameron Gray"
+format: pdf
+editor: visual
+---
+
+```{r}
+#| warning: false
+library(httr2)
+library(tidyverse)
+library(jsonlite)
+library(rvest)
+library(tibblify)
+library(lubridate)
+```
+
+We start by collecting all the informational data for my area of interest with the longitude and latitude using the goverment weather api. Using the longitude and latitude the api returns the hourly forecast for the next 72 hours for my location.
+
+```{r}
+apiurl = "https://api.weather.gov"
+
+lat = "42.773022"
+lon = "-73.697861"
+
+resp <- apiurl |>
+  request() |>
+  req_url_path_append(
+    "points",
+    paste(lat,lon, sep=",")
+  ) |>
+  req_perform() |>
+  resp_body_json()
+```
+
+```{r}
+forecast <- resp$properties$forecastHourly |>
+  request() |>
+  req_perform() |>
+  resp_body_json()
+```
+
+Transform the data into a usable data set.
+
+```{r}
+trueforecast <- forecast$properties$periods |>
+  tibblify()
+```
+
+Transformed the data into usable formats and calculates the `ridingValue` which on a scale of 0-100, 100 being a good day to ride my motorcycle and 0 being a bad day to ride my motorcycle. In general on this scale more than 80 is a good day to ride.
+
+```{r}
+datedforecast <- trueforecast |>
+  mutate(startTime = ymd_hms(substring(startTime, 0, 19)),
+         probabilityOfPrecipitation = probabilityOfPrecipitation$value,
+         dewpoint = dewpoint$value,
+         relativeHumidity = relativeHumidity$value,
+         ridingValue = (temperature + (100-probabilityOfPrecipitation))/2
+         ) |>
+  print()
+```
+
+Here we graph the data as a time series for the next 72 hours
+
+```{r}
+datedforecast |>
+  ggplot(aes(x=startTime)) +
+  geom_line(aes(y=temperature, color = "blue")) +
+  geom_line(aes(y=probabilityOfPrecipitation, color = "red")) +
+  geom_line(aes(y=relativeHumidity, color = "yellow")) +
+  geom_line(aes(y=ridingValue, color = "black")) +
+  scale_color_hue(
+    labels=c("Temp (F)", "Precip Chance %", "Humidity %", "Riding Value")
+    ) +
+  scale_x_datetime(date_labels = "%b%e %H:%M", date_breaks = "6 hour", ) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        axis.title.y = element_blank())
+
+```
+
+## Conclusion
+
+This visualization is very quick way to look at the stats that I look for when I go on a motorcycle ride. I culminated a few of the most important statistics into a variable called `ridingValue` that describes the whether or not it would be a good time to go on a motorcycle ride based on the weather forecast.
+
+
+
+
+
