@@ -60,3 +60,32 @@ annual_debt  |>
 ## [Conclusion:]{.underline}
 
 The U.S total debt has been constantly increasing year after year for the past 30 years. There is not a single year where the total debt is less than the previous year's one . It is urgent that government takes measures to have the level of public debt under control.
+
+## Cameron Gray TidyVERSE Extend
+
+I'm going to add a connecting line but due to the way the previous work as been done the variables have been overwritten in such a way I have to redo some code to get the same result to preserve the original work. I know that this is not necessary to ensure that the work is done properly but I wanted to do so for the class to ensure the work is distinct for each of us.
+
+```{r}
+annual_debt <- req_fiscal_data  |>
+  req_url_path_append("/v2/accounting/od/debt_to_penny?page[number]=1&page[size]=7930")  |>
+  req_perform()  |>
+  resp_body_json()
+
+annual_debt1 <- annual_debt$data  |>
+  tibblify() |>
+  select(record_fiscal_year, tot_pub_debt_out_amt)  |>
+  mutate(tot_pub_debt_out_amt = as.numeric(tot_pub_debt_out_amt),
+         record_fiscal_year = as.numeric(record_fiscal_year))  |>
+  rename(year = record_fiscal_year, total_debt = tot_pub_debt_out_amt)  |>
+  group_by(year)  |>
+  summarise(annual_debt = mean(total_debt)) |>
+  print()
+
+annual_debt1  |>
+  ggplot(aes(x = year, y = annual_debt))+
+  geom_point()+
+  geom_line()+
+  labs(title = "US Total Public Debt from 1993 through 2025")+
+  scale_x_continuous(breaks = seq(1993, 2025, by = 2))+
+  scale_y_continuous(labels = scales::comma, breaks = seq(0, 36000000000000, by = 5000000000000))
+```
