@@ -74,3 +74,5 @@ Tidyextend project of "Rupendra Shrestha" - Accessing the National Weather Servi
 29. Cameron Gray, TidyEXTEND, "Henock Montcho, US Total Public Debt API"
 
 30. Tai Chou-Kudu, MET API, Extension of "Yana Rabkova - The Metropolitan Museum of Art Collection API" - exploring Chinese art in the MET
+
+31. Yana Rabkova, Extended Nana's Tidy Beer project 

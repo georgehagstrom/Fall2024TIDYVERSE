@@ -3,7 +3,7 @@ title: "TidyVerse Work 1"
 format: html
 author: Nana Frimpong
 editor: visual
---- 
+---
 
 ```{r}
 library(httr2)
@@ -146,3 +146,39 @@ plot_usmap(
 ) 
 
 ```
+
+# Yana Rabkova - Extended Nana's work
+
+```{r}
+beer_characters %>%
+  mutate(region = case_when(
+    state %in% c("California", "Oregon", "Washington") ~ "West",
+    state %in% c("Texas", "Colorado", "New Mexico") ~ "Southwest",
+    state %in% c("New York", "Massachusetts", "Pennsylvania") ~ "Northeast",
+    state %in% c("Illinois", "Ohio", "Michigan") ~ "Midwest",
+    TRUE ~ "Other"
+  )) %>%
+  count(region, brewery_type) %>%
+  ggplot(aes(x = reorder(region, n), y = n, fill = brewery_type)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Brewery Types by Region",
+    x = "Region",
+    y = "Number of Breweries",
+    fill = "Brewery Type"
+  ) +
+  theme_minimal()
+```
+```{r}
+library(wordcloud)
+library(tidytext)
+#Most Frequent Words in Brewery Names
+
+beer_characters %>%
+  filter(!is.na(name)) %>%
+  unnest_tokens(word, name) %>%
+  count(word, sort = TRUE) %>%
+  with(wordcloud(word, n, max.words = 100, random.order = FALSE, colors = "darkgreen"))
+```
+
+
