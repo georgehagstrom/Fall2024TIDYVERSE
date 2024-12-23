@@ -15,7 +15,7 @@ library(tibblify)
 library(lubridate)
 ```
 
-We start by collecting all the informational data for my area of interest with the longitude and latitude using the goverment weather api. Using the longitude and latitude the api returns the hourly forecast for the next 72 hours for my location.
+We start by collecting all the informational data for my area of interest with the longitude and latitude using the Goverment Weather API. Using the longitude and latitude the api returns the hourly forecast for the next 72 hours for my location.
 
 ```{r}
 apiurl = "https://api.weather.gov"
@@ -74,15 +74,11 @@ datedforecast |>
     ) +
   scale_x_datetime(date_labels = "%b%e %H:%M", date_breaks = "6 hour", ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        axis.title.y = element_blank())
+        axis.title.y = element_blank())+
+  ggtitle("Weather Forecast Plot")
 
 ```
 
 ## Conclusion
 
 This visualization is very quick way to look at the stats that I look for when I go on a motorcycle ride. I culminated a few of the most important statistics into a variable called `ridingValue` that describes the whether or not it would be a good time to go on a motorcycle ride based on the weather forecast.
-
-
-
-
-
