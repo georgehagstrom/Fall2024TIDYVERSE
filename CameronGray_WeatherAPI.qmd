@@ -75,7 +75,7 @@ datedforecast |>
   scale_x_datetime(date_labels = "%b%e %H:%M", date_breaks = "6 hour", ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
         axis.title.y = element_blank())+
-  ggtitle("Weather Forecast Plot")
+  ggtitle("The Next 72 Hours Weather Forecast Plot")
 
 ```
 
