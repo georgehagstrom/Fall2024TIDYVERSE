@@ -1,0 +1,113 @@
+---
+title: "Code"
+author: "Tanvir Raju"
+date: "2024-11-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# Title: NWS Weather Alerts Analysis
+# Author: Andreina Abreu
+# Description:
+
+# API: Weather Alerts API by National Weather Service (NWS)
+# API Documentation: https://www.weather.gov/documentation/services-web-api#/default/alerts_query
+
+# Introduction:
+# The Weather Alerts API provides access to real-time weather alerts across the U.S. 
+# In this analysis, I retrieve current severe weather alerts and determine the most frequently reported event types.
+
+# Code:
+# Load necessary packages
+
+library(httr2)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(purrr)
+
+# Define API URL
+url <- "https://api.weather.gov/alerts/active"
+
+# Function to get active weather alerts
+get_weather_alerts <- function() {
+  response <- request(url) %>%
+    req_perform()
+  
+  if (response$status_code == 200) {
+    return(resp_body_json(response)$features)  
+  } else {
+    stop("Error: ", response$status_code)
+  }
+}
+
+# Process data into tidy format
+alerts_data <- get_weather_alerts()
+
+alerts_df <- tibble(
+  event = map_chr(alerts_data, ~ .x$properties$event %||% "Unknown"),
+  severity = map_chr(alerts_data, ~ .x$properties$severity %||% "Unknown"),
+  urgency = map_chr(alerts_data, ~ .x$properties$urgency %||% "Unknown"),
+  area_desc = map_chr(alerts_data, ~ .x$properties$areaDesc %||% "Unknown"),
+  headline = map_chr(alerts_data, ~ .x$properties$headline %||% "No Headline"),
+  effective = map_chr(alerts_data, ~ .x$properties$effective %||% NA),
+  expires = map_chr(alerts_data, ~ .x$properties$expires %||% NA)
+)
+
+# Filter alerts by severity and urgency
+filtered_alerts <- alerts_df %>%
+  filter(severity %in% c("Severe", "Moderate"), urgency %in% c("Immediate", "Expected"))
+
+# Count occurrences by event type and severity
+event_severity_counts <- filtered_alerts %>%
+  group_by(event, severity) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  arrange(desc(count))
+
+# Print filtered event counts
+print(event_severity_counts)
+
+# Visualization: Frequency of Events by Severity
+ggplot(event_severity_counts, aes(x = reorder(event, count), y = count, fill = severity)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  coord_flip() +
+  labs(title = "Frequency of Severe Weather Events by Severity",
+       x = "Event Type",
+       y = "Number of Alerts",
+       fill = "Severity") +
+  theme_minimal()
+
+# Visualizing alerts geographically (extracting unique regions)
+regions <- alerts_df %>%
+  mutate(region_list = strsplit(area_desc, ", ")) %>%
+  unnest(region_list) %>%
+  group_by(region_list) %>%
+  summarise(alert_count = n(), .groups = 'drop')
+
+# Print top affected regions
+print(regions %>% arrange(desc(alert_count)))
+
+# Visualization: Top 10 Regions by Alert Count
+top_regions <- regions %>%
+  arrange(desc(alert_count)) %>%
+  slice(1:10)
+
+ggplot(top_regions, aes(x = reorder(region_list, alert_count), y = alert_count)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  coord_flip() +
+  labs(title = "Top 10 Regions Affected by Weather Alerts",
+       x = "Region",
+       y = "Number of Alerts") +
+  theme_minimal()
+
+# Conclusion:
+# This extended analysis provides a deeper insight into the current weather alerts. Filtering by severity and urgency
+# highlights the most critical weather events. Additionally, geographic visualization offers a clear picture of
+# regions most affected by alerts, aiding preparedness and mitigation efforts.
+
+```
+
